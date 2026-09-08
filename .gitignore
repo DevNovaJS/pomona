@@ -38,3 +38,9 @@ out/
 
 ### Kotlin ###
 .kotlin
+
+CLAUDE.md
+.env
+application-local.yml
+docker-compose.yml
+docs/
