@@ -1,0 +1,62 @@
+{
+  "response": {
+    "body": {
+      "dataType": "JSON",
+      "items": {
+        "item": [
+          {
+            "ctgry_cd": "400",
+            "ctgry_nm": "과일류",
+            "exmn_dd_cnvs_prc": "19900",
+            "exmn_dd_prc": "19900",
+            "exmn_ymd": "20260907",
+            "grd_cd": "04",
+            "grd_nm": "상품",
+            "item_cd": "411",
+            "item_nm": "사과",
+            "mrkt_cd": "0250401",
+            "mrkt_nm": "C-유통",
+            "orgnl_reg_dt": "2026-09-07T15:03:15Z",
+            "se_cd": "01",
+            "se_nm": "소매",
+            "sgg_cd": "2501",
+            "sgg_nm": "대전",
+            "unit": "개",
+            "unit_sz": "10",
+            "vrty_cd": "06",
+            "vrty_nm": "쓰가루(아오리)"
+          },
+          {
+            "ctgry_cd": "400",
+            "ctgry_nm": "과일류",
+            "exmn_dd_cnvs_prc": "25000",
+            "exmn_dd_prc": "25000",
+            "exmn_ymd": "20260907",
+            "grd_cd": "04",
+            "grd_nm": "상품",
+            "item_cd": "411",
+            "item_nm": "사과",
+            "mrkt_cd": "0310001",
+            "mrkt_nm": "지동",
+            "orgnl_reg_dt": "2026-09-07T15:03:15Z",
+            "se_cd": "01",
+            "se_nm": "소매",
+            "sgg_cd": "3111",
+            "sgg_nm": "수원",
+            "unit": "개",
+            "unit_sz": "10",
+            "vrty_cd": "06",
+            "vrty_nm": "쓰가루(아오리)"
+          }
+        ]
+      },
+      "numOfRows": 2,
+      "pageNo": 1,
+      "totalCount": 108
+    },
+    "header": {
+      "resultCode": "0",
+      "resultMsg": "정상"
+    }
+  }
+}

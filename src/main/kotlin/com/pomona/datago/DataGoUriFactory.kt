@@ -16,7 +16,7 @@ class DataGoUriFactory(
     private val serviceKey: String,
 ) {
     fun build(path: String, params: Map<String, String>): URI {
-        val query = params.entries.joinToString("&") { (name, value) ->
+        val query = (params + FIXED_PARAMS).entries.joinToString("&") { (name, value) ->
             "${encode(name)}=${encode(value)}"
         }
         return URI.create("$baseUrl/$path?serviceKey=$serviceKey&$query")
@@ -25,3 +25,6 @@ class DataGoUriFactory(
     private fun encode(value: String): String =
         URLEncoder.encode(value, StandardCharsets.UTF_8)
 }
+
+/** 모든 요청에 붙는 값. serviceKey 는 이미 인코딩된 값이라 여기 넣지 않는다. */
+private val FIXED_PARAMS = mapOf("returnType" to "json")

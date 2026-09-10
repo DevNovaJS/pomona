@@ -20,4 +20,14 @@ class DataGoUriFactoryTest {
         assertThat(uri.toString())
             .contains("cond%5Btrd_clcln_ymd%3A%3AEQ%5D=2026-09-07")
     }
+
+    @Test
+    fun `응답 형식을 항상 json 으로 요청한다`() {
+        val uri = factory.build(
+            path = "perDay/price",
+            params = mapOf("pageNo" to "1"),
+        )
+
+        assertThat(uri.toString()).contains("returnType=json")
+    }
 }
