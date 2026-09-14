@@ -44,3 +44,4 @@ CLAUDE.md
 application-local.yml
 docker-compose.yml
 docs/
+application-test.yml

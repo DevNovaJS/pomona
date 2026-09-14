@@ -34,4 +34,13 @@ class TradeItemTest {
         assertThat(item.totprc).isEqualTo("7395000.000")
         assertThat(item.unitTotQty).isEqualTo("810.000")
     }
+
+    @Test
+    fun `문서에 없는 null 이 와도 역직렬화가 터지지 않는다`() {
+        // pkg_nm 은 실제 API 에서 모든 날짜에 null 로 온다. 여기서 터지면 배치가 통째로 죽는다.
+        val item = firstItem()
+
+        assertThat(item.pkgNm).isNull()
+        assertThat(item.pkgCd).isEqualTo("101")
+    }
 }
