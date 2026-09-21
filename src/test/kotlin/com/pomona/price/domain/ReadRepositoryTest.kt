@@ -1,6 +1,6 @@
 package com.pomona.price.domain
 
-import com.pomona.price.model.WholesaleDailyUpsert
+import com.pomona.price.model.WholesaleDailyRow
 import com.pomona.variety.domain.VarietyRepository
 import com.pomona.variety.domain.VarietyUpsertRepository
 import com.pomona.variety.model.VarietyUpsert
@@ -18,11 +18,11 @@ import java.time.LocalDate
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Import(VarietyUpsertRepository::class, WholesaleDailyUpsertRepository::class)
+@Import(VarietyUpsertRepository::class, WholesaleDailyWriteRepository::class)
 class ReadRepositoryTest {
 
     @Autowired private lateinit var varietyUpsert: VarietyUpsertRepository
-    @Autowired private lateinit var wholesaleUpsert: WholesaleDailyUpsertRepository
+    @Autowired private lateinit var wholesaleWriter: WholesaleDailyWriteRepository
     @Autowired private lateinit var varieties: VarietyRepository
     @Autowired private lateinit var wholesale: WholesaleDailyRepository
 
@@ -30,7 +30,7 @@ class ReadRepositoryTest {
         VarietyUpsert("ZZ", "시험대분류", "ZZ", "시험중분류", "01", "시험홍로"))
 
     private fun 도매심기(varietyId: Long, date: LocalDate, qty: String) =
-        wholesaleUpsert.upsertAll(listOf(WholesaleDailyUpsert(
+        wholesaleWriter.replaceDay(date, "110001", listOf(WholesaleDailyRow(
             trdClclnYmd = date, whslMrktCd = "110001", varietyId = varietyId,
             trdSe = "경매", grdCd = "11", grdNm = "특",
             plorCd = "367000", plorNm = "충청북도 괴산군", unitNm = "kg",

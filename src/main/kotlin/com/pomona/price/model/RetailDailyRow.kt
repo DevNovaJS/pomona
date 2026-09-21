@@ -4,7 +4,7 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 
 /** 소매 조사 한 건. 접지 않으므로 [가격] API 한 행과 1:1 이다. */
-data class RetailDailyUpsert(
+data class RetailDailyRow(
     val exmnYmd: LocalDate,
     val seCd: String, val seNm: String,
     val ctgryCd: String, val ctgryNm: String,

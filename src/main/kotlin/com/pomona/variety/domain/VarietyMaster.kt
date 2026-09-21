@@ -23,26 +23,22 @@ class VarietyMaster(
     val lclsfCd: String,
 
     @Column(nullable = false, length = 20)
-    var lclsfNm: String,
+    val lclsfNm: String,
 
     @Column(nullable = false, length = 2)
     val mclsfCd: String,
 
     @Column(nullable = false, length = 20)
-    var mclsfNm: String,
+    val mclsfNm: String,
 
     @Column(nullable = false, length = 2)
     val sclsfCd: String,
 
     /** 실측 12,175행 중 22행이 null 로 온다. 코드는 오는데 이름이 비어 있다. */
     @Column(length = 20)
-    var sclsfNm: String?,
+    val sclsfNm: String?,
 ) {
-    /**
-     * `bigserial`. DB 가 매기므로 `persist` 전에는 null 이다.
-     * 밖에서 못 바꾸도록 `protected set` 을 건다 — id 를 손으로 넣는 경로는 없어야 한다.
-     * (JPA 플러그인이  클래스를 open 으로 만들기 때문에 private set 은 쓸 수 없다.)
-     */
+    /** `bigserial`. DB 가 매기므로 persist 전에는 null 이고 persist 때 값이 채워진다. */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null

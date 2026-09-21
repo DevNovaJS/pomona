@@ -8,7 +8,10 @@
 --   docker exec -i pomona-postgres psql -U pomona -d pomona < db/schema.sql
 --
 -- 모든 테이블은 bigserial 인조키를 PK 로 두고, 자연키는 유니크 제약으로 강제한다.
--- 이 유니크 제약이 재수집 멱등성의 근거다 — ON CONFLICT (자연키) DO UPDATE.
+-- 재수집은 두 방식이다. 품종 마스터는 도매 행이 FK 로 참조하므로 ON CONFLICT 로 upsert 하고,
+-- 도매·소매 일별 테이블은 날짜(소매는 품목 x 기간) 단위로 지우고 다시 넣는다.
+-- 일별 테이블의 유니크 제약은 ON CONFLICT 용이 아니라, 집계 버그로 같은 키가 두 번 들어가는 걸 막고
+-- 날짜 조회를 맡는 용도다 (날짜 컬럼으로 시작하므로 날짜 단독 인덱스가 따로 필요 없다).
 
 
 -- ---------------------------------------------------------------------------
@@ -62,8 +65,9 @@ create table if not exists wholesale_daily (
     low_prc_per_kg  numeric(12,2) not null,
     high_prc_per_kg numeric(12,2) not null,
     trade_count   integer       not null,
+    -- 날짜 단위로 지우고 다시 넣으므로 행이 수정되는 일이 없다. updated_at 을 두지 않는다.
+    -- created_at = 이 날짜를 마지막으로 다시 수집한 시각.
     created_at    timestamptz   not null default now(),
-    updated_at    timestamptz   not null default now(),
 
     -- unit_nm 이 자연키에 들어가는 이유: 단위가 다른 행이 같은 키로 접히면
     -- SUM(tot_qty) 가 kg 와 '개' 를 더해버린다. 표본은 전부 kg 이라 행 수는 늘지 않는다.
@@ -98,8 +102,6 @@ comment on column wholesale_daily.trade_count   is '이 한 행으로 접힌 원
 
 -- 품종 페이지의 12개월 시계열
 create index if not exists ix_wholesale_variety_date on wholesale_daily (variety_id, trd_clcln_ymd);
--- 메인·물가지수의 특정일 조회
-create index if not exists ix_wholesale_date         on wholesale_daily (trd_clcln_ymd);
 
 
 -- ---------------------------------------------------------------------------
@@ -129,8 +131,8 @@ create table if not exists retail_daily (
     exmn_dd_prc      bigint      not null,
     exmn_dd_cnvs_prc bigint      not null,
     orgnl_reg_dt     timestamptz,
+    -- 품목 x 기간 단위로 지우고 다시 넣으므로 updated_at 을 두지 않는다.
     created_at       timestamptz not null default now(),
-    updated_at       timestamptz not null default now(),
 
     -- se_cd 가 자연키에 있어야 나중에 중도매(02)를 추가해도 소매 행을 덮어쓰지 않는다.
     constraint uq_retail_daily unique (
@@ -155,7 +157,6 @@ comment on column retail_daily.orgnl_reg_dt     is '원본 시스템 등록일�
 
 -- 물가 지수·품종 페이지의 시계열
 create index if not exists ix_retail_item_date on retail_daily (item_cd, vrty_cd, exmn_ymd);
-create index if not exists ix_retail_date      on retail_daily (exmn_ymd);
 
 
 -- ---------------------------------------------------------------------------

@@ -37,6 +37,10 @@ class BatchRun(
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "jsonb")
     val params: String,
+
+    /** 실행 시작 시각. 만드는 순간으로 정해지고 바뀌지 않는다. 기본값이 있어 생략하면 지금 시각이 들어간다. */
+    @Column(nullable = false)
+    val startedAt: OffsetDateTime = OffsetDateTime.now(),
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -56,14 +60,19 @@ class BatchRun(
     var message: String? = null
         protected set
 
-    @Column(nullable = false)
-    val startedAt: OffsetDateTime = OffsetDateTime.now()
-
     @Column
     var finishedAt: OffsetDateTime? = null
         protected set
 
-    fun succeed(rowCount: Int) = finish(if (rowCount == 0) BatchStatus.EMPTY else BatchStatus.SUCCESS, rowCount, null)
+    fun succeed(rowCount: Int) {
+        val status = if (rowCount == 0) {
+            BatchStatus.EMPTY
+        } else {
+            BatchStatus.SUCCESS
+        }
+
+        finish(status, rowCount, null)
+    }
 
     fun fail(message: String) = finish(BatchStatus.FAILED, 0, message)
 

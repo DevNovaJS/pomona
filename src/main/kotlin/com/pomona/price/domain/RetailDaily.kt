@@ -47,12 +47,12 @@ class RetailDaily(
     @Column(nullable = false, length = 10) val unitSz: String,
 
     /** 조사일가격(원). 위 묶음 하나의 값. */
-    @Column(nullable = false) var exmnDdPrc: Long,
+    @Column(nullable = false) val exmnDdPrc: Long,
 
     /** kg 환산가. [unit] 이 kg 일 때만 실제로 환산된다. '개' 단위는 조사가를 복사해 온다. */
-    @Column(nullable = false) var exmnDdCnvsPrc: Long,
+    @Column(nullable = false) val exmnDdCnvsPrc: Long,
 
-    @Column var orgnlRegDt: OffsetDateTime?,
+    @Column val orgnlRegDt: OffsetDateTime?,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

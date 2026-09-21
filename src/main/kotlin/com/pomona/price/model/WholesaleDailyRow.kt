@@ -4,7 +4,7 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 /** 도매 집계 한 줄. 배치가 [정산] 원본 여러 행을 접어서 만든 결과. */
-data class WholesaleDailyUpsert(
+data class WholesaleDailyRow(
     val trdClclnYmd: LocalDate,
     val whslMrktCd: String,
     val varietyId: Long,

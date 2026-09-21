@@ -42,37 +42,37 @@ class WholesaleDaily(
     val grdCd: String,
 
     @Column(nullable = false, length = 20)
-    var grdNm: String,
+    val grdNm: String,
 
     @Column(nullable = false, length = 6)
     val plorCd: String,
 
     /** 원산지명. 꼬리 공백이 붙어 오므로 trim 해서 넣는다. 실측 17행은 null. */
     @Column(length = 30)
-    var plorNm: String?,
+    val plorNm: String?,
 
     @Column(nullable = false, length = 10)
     val unitNm: String,
 
     /** SUM(totprc). 이 묶음으로 오간 거래대금 총액(원). */
     @Column(nullable = false)
-    var totPrc: Long,
+    val totPrc: Long,
 
     /** SUM(unit_tot_qty). 실제로 오간 무게 합(kg). 소수가 실제로 온다. */
     @Column(nullable = false, precision = 14, scale = 3)
-    var totQty: BigDecimal,
+    val totQty: BigDecimal,
 
     /** MIN(lwprc / unit_qty). 최저 낙찰가의 kg 환산. 내림으로 저장한다. */
     @Column(nullable = false, precision = 12, scale = 2)
-    var lowPrcPerKg: BigDecimal,
+    val lowPrcPerKg: BigDecimal,
 
     /** MAX(hgprc / unit_qty). 최고 낙찰가의 kg 환산. 올림으로 저장한다. */
     @Column(nullable = false, precision = 12, scale = 2)
-    var highPrcPerKg: BigDecimal,
+    val highPrcPerKg: BigDecimal,
 
     /** 이 한 줄로 합쳐진 [정산] 원본 행 수. 39%가 1이다 — 그런 행의 대표가는 단일 거래값이다. */
     @Column(nullable = false)
-    var tradeCount: Int,
+    val tradeCount: Int,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
