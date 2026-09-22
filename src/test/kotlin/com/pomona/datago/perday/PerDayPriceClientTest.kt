@@ -46,6 +46,44 @@ class PerDayPriceClientTest {
     }
 
     @Test
+    fun `전체 건수가 한 페이지를 넘으면 다음 페이지까지 이어서 받는다`() {
+        // totalCount 108, numOfRows 100 -> 2 페이지
+        server.expect(requestTo(containsString("pageNo=1")))
+            .andRespond(withSuccess(fixture("perday-price-2rows.json"), MediaType.APPLICATION_JSON))
+        server.expect(requestTo(containsString("pageNo=2")))
+            .andRespond(withSuccess(fixture("perday-price-2rows.json"), MediaType.APPLICATION_JSON))
+
+        val items = client.fetchAll(request().copy(numOfRows = 100))
+
+        assertThat(items).hasSize(4)
+        server.verify()
+    }
+
+    @Test
+    fun `한 페이지로 끝나면 추가 호출을 하지 않는다`() {
+        // totalCount 108, numOfRows 1000 -> 1 페이지
+        server.expect(requestTo(containsString("pageNo=1")))
+            .andRespond(withSuccess(fixture("perday-price-2rows.json"), MediaType.APPLICATION_JSON))
+
+        val items = client.fetchAll(request())
+
+        assertThat(items).hasSize(2)
+        server.verify()
+    }
+
+    @Test
+    fun `조사가 없으면 빈 목록을 돌려주고 추가 호출을 하지 않는다`() {
+        // 실제 응답: 2026-09-04 딸기 소매 0행
+        server.expect(requestTo(containsString("pageNo=1")))
+            .andRespond(withSuccess(fixture("perday-price-empty.json"), MediaType.APPLICATION_JSON))
+
+        val items = client.fetchAll(request())
+
+        assertThat(items).isEmpty()
+        server.verify()
+    }
+
+    @Test
     fun `결과 코드가 0이 아니면 예외를 던진다`() {
         server.expect(requestTo(containsString("perDay/price")))
             .andRespond(withSuccess(fixture("perday-price-error.json"), MediaType.APPLICATION_JSON))

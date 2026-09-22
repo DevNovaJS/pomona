@@ -2,6 +2,7 @@ package com.pomona.datago.katsale
 
 import com.pomona.datago.DataGoUriFactory
 import com.pomona.datago.common.DataGoResponse
+import com.pomona.datago.common.lastPageOf
 import com.pomona.datago.common.orThrow
 import com.pomona.datago.katsale.model.TradeItem
 import com.pomona.datago.katsale.model.TradeRequest
@@ -34,8 +35,4 @@ class KatSaleClient(
         return first.items + ((request.pageNo + 1)..lastPage)
             .flatMap { fetchPage(request.copy(pageNo = it)).items }
     }
-
-    /** 올림 나눗셈. totalCount 가 0 이면 0 페이지가 되어 추가 호출이 없다. */
-    private fun lastPageOf(totalCount: Int, numOfRows: Int): Int =
-        (totalCount + numOfRows - 1) / numOfRows
 }
