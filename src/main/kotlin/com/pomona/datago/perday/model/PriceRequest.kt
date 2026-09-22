@@ -9,6 +9,8 @@ data class PriceRequest(
     val to: LocalDate,
     val categoryCode: String,
     val itemCode: String,
+    /** 조사 구분. 01 소매 / 02 중도매 / 03 친환경. 이 프로젝트는 소매만 수집한다. */
+    val seCd: String = "01",
     val varietyCode: String? = null,
     val pageNo: Int = 1,
     val numOfRows: Int = MAX_ROWS_PER_PAGE,
@@ -16,7 +18,7 @@ data class PriceRequest(
     fun toParams(): Map<String, String> = buildMap {
         put("cond[exmn_ymd::GTE]", from.format(YMD))
         put("cond[exmn_ymd::LTE]", to.format(YMD))
-        put("cond[se_cd::EQ]", RETAIL)
+        put("cond[se_cd::EQ]", seCd)
         put("cond[ctgry_cd::EQ]", categoryCode)
         put("cond[item_cd::EQ]", itemCode)
         if (varietyCode != null) {
@@ -26,9 +28,6 @@ data class PriceRequest(
         put("numOfRows", numOfRows.toString())
     }
 }
-
-/** 조사 구분. 01 소매 / 02 중도매 / 03 친환경. 이 프로젝트는 소매만 수집한다. */
-private const val RETAIL = "01"
 
 /** 가격 API 는 구분자 없는 YYYYMMDD 를 쓴다. 정산정보의 YYYY-MM-DD 와 다르다. */
 private val YMD: DateTimeFormatter = DateTimeFormatter.BASIC_ISO_DATE
