@@ -49,30 +49,30 @@ class WholesaleCollectorTest {
     private val collector by lazy { WholesaleCollector(client, varieties, wholesale, runs) }
 
     /** 픽스처의 정산일자 */
-    private val 날짜 = LocalDate.of(2026, 9, 7)
+    private val day = LocalDate.of(2026, 9, 7)
 
     private fun fixture(name: String): String =
         checkNotNull(javaClass.getResource("/datago/$name")) { "픽스처 없음: $name" }.readText()
 
     /** 과실류(06)·과일과채류(08) 호출에 각각 돌려줄 응답 */
-    private fun 응답(과실류: String, 과일과채류: String) {
+    private fun respondWith(fruit: String, fruitVegetable: String) {
         server.expect(requestTo(containsString("cond%5Bgds_lclsf_cd%3A%3AEQ%5D=06")))
-            .andRespond(withSuccess(fixture(과실류), MediaType.APPLICATION_JSON))
+            .andRespond(withSuccess(fixture(fruit), MediaType.APPLICATION_JSON))
         server.expect(requestTo(containsString("cond%5Bgds_lclsf_cd%3A%3AEQ%5D=08")))
-            .andRespond(withSuccess(fixture(과일과채류), MediaType.APPLICATION_JSON))
+            .andRespond(withSuccess(fixture(fruitVegetable), MediaType.APPLICATION_JSON))
     }
 
-    private fun 도매행수() =
-        jdbc.queryForObject("select count(*) from wholesale_daily where trd_clcln_ymd = ?", Int::class.java, 날짜)
+    private fun wholesaleRowCount() =
+        jdbc.queryForObject("select count(*) from wholesale_daily where trd_clcln_ymd = ?", Int::class.java, day)
 
-    /** 그 날짜에 이미 들어가 있던 행 하나 */
-    private fun 기존행심기() {
+    /** 그 day에 이미 들어가 있던 행 하나 */
+    private fun plantExistingRow() {
         val varietyId = varieties.upsert(VarietyUpsert("ZZ", "시험", "ZZ", "시험", "01", "시험"))
         wholesale.replaceDay(
-            날짜, "110001",
+            day, "110001",
             listOf(
                 WholesaleDailyRow(
-                    trdClclnYmd = 날짜, whslMrktCd = "110001", varietyId = varietyId,
+                    trdClclnYmd = day, whslMrktCd = "110001", varietyId = varietyId,
                     trdSe = "경매", grdCd = "11", grdNm = "특", plorCd = "000000", plorNm = "옛 산지", unitNm = "kg",
                     totPrc = 1, totQty = BigDecimal.ONE,
                     lowPrcPerKg = BigDecimal.ONE, highPrcPerKg = BigDecimal.ONE, tradeCount = 1,
@@ -83,51 +83,51 @@ class WholesaleCollectorTest {
 
     @Test
     fun `정상 응답이면 집계해서 저장하고 SUCCESS 로 기록한다`() {
-        응답(과실류 = "katsale-trades-single-page.json", 과일과채류 = "katsale-trades-empty.json")
+        respondWith(fruit = "katsale-trades-single-page.json", fruitVegetable = "katsale-trades-empty.json")
 
-        val run = collector.collect(날짜)
+        val run = collector.collect(day)
 
         server.verify()
         assertThat(run.status).isEqualTo(BatchStatus.SUCCESS)
         assertThat(run.rowCount).isEqualTo(2)                 // 홍로 특급, 산지 2곳
-        assertThat(도매행수()).isEqualTo(2)
+        assertThat(wholesaleRowCount()).isEqualTo(2)
         assertThat(run.params).contains("2026-09-07")
         assertThat(run.finishedAt).isNotNull()
     }
 
     @Test
     fun `응답이 0행이면 그 날짜 기존 행을 지우고 EMPTY 로 기록한다`() {
-        기존행심기()
-        응답(과실류 = "katsale-trades-empty.json", 과일과채류 = "katsale-trades-empty.json")
+        plantExistingRow()
+        respondWith(fruit = "katsale-trades-empty.json", fruitVegetable = "katsale-trades-empty.json")
 
-        val run = collector.collect(날짜)
+        val run = collector.collect(day)
 
         assertThat(run.status).isEqualTo(BatchStatus.EMPTY)
-        assertThat(도매행수()).isZero()
+        assertThat(wholesaleRowCount()).isZero()
     }
 
     @Test
     fun `API 가 오류를 주면 기존 행을 건드리지 않고 FAILED 와 사유를 기록한다`() {
-        기존행심기()
+        plantExistingRow()
         server.expect(requestTo(containsString("cond%5Bgds_lclsf_cd%3A%3AEQ%5D=06")))
             .andRespond(withSuccess(fixture("katsale-trades-error.json"), MediaType.APPLICATION_JSON))
 
-        val run = collector.collect(날짜)
+        val run = collector.collect(day)
 
         assertThat(run.status).isEqualTo(BatchStatus.FAILED)
         assertThat(run.message).contains("22")
-        assertThat(도매행수()).isEqualTo(1)
+        assertThat(wholesaleRowCount()).isEqualTo(1)
     }
 
     @Test
     fun `실행 기록이 DB 에 남는다`() {
-        응답(과실류 = "katsale-trades-single-page.json", 과일과채류 = "katsale-trades-empty.json")
+        respondWith(fruit = "katsale-trades-single-page.json", fruitVegetable = "katsale-trades-empty.json")
 
-        val run = collector.collect(날짜)
+        val run = collector.collect(day)
 
         val saved = runs.findById(run.id!!).get()
         assertThat(saved.jobName).isEqualTo("wholesale-daily")
-        assertThat(saved.targetDate).isEqualTo(날짜)
+        assertThat(saved.targetDate).isEqualTo(day)
         assertThat(saved.status).isEqualTo(BatchStatus.SUCCESS)
     }
 }

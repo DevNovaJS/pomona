@@ -1,73 +1,41 @@
 package com.pomona.batch.service
 
 import com.pomona.batch.domain.BatchRun
-import com.pomona.batch.domain.BatchRunRepository
-import com.pomona.datago.katsale.KatSaleClient
-import com.pomona.datago.perday.PerDayPriceClient
-import com.pomona.price.domain.RetailDailyWriteRepository
-import com.pomona.price.domain.WholesaleDailyWriteRepository
-import com.pomona.variety.domain.VarietyUpsertRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import java.time.LocalDate
+import java.time.ZoneId
 
-/** 스케줄이 어느 날짜·품목을 수집하라고 시키는지만 본다. 수집기 자체는 각자 테스트가 있다. */
+/** 스케줄은 "언제, 어느 기간을" 넘기는지만 본다. 수집 자체는 RangeCollector 테스트가 본다. */
 class DailyCollectScheduleTest {
 
-    private val 오늘 = LocalDate.of(2026, 9, 21)
-
-    private class 도매대역 : WholesaleCollector(
-        mock(KatSaleClient::class.java), mock(VarietyUpsertRepository::class.java),
-        mock(WholesaleDailyWriteRepository::class.java), mock(BatchRunRepository::class.java),
-    ) {
-        val 받은날짜 = mutableListOf<LocalDate>()
-        override fun collect(date: LocalDate): BatchRun {
-            받은날짜 += date
-            return BatchRun("wholesale-daily", date, "{}")
+    private class FakeRangeCollector : RangeCollector(mock(WholesaleCollector::class.java), mock(RetailCollector::class.java)) {
+        var receivedRange: Pair<LocalDate, LocalDate>? = null
+        override fun collectAllIfIdle(from: LocalDate, to: LocalDate): List<BatchRun>? {
+            receivedRange = from to to
+            return emptyList()
         }
     }
 
-    private class 소매대역 : RetailCollector(
-        mock(PerDayPriceClient::class.java), mock(RetailDailyWriteRepository::class.java),
-        mock(BatchRunRepository::class.java),
-    ) {
-        val 받은요청 = mutableListOf<Triple<RetailItem, LocalDate, LocalDate>>()
-        override fun collect(item: RetailItem, from: LocalDate, to: LocalDate): BatchRun {
-            받은요청 += Triple(item, from, to)
-            return BatchRun("retail-daily", to, "{}")
-        }
-    }
-
-    private val 도매 = 도매대역()
-    private val 소매 = 소매대역()
-    private val schedule = DailyCollectSchedule(도매, 소매)
+    private val range = FakeRangeCollector()
+    private val schedule = DailyCollectSchedule(range)
 
     @Test
-    fun `도매는 D-1 부터 D-5 까지 다섯 날짜를 수집한다`() {
+    fun `D-5 부터 D-1 까지를 수집하라고 넘긴다`() {
         // 확정 지연: 전날치만 한 번 받으면 16% 가 영영 빠진다.
-        schedule.collect(오늘)
+        val today = LocalDate.now(ZoneId.of("Asia/Seoul"))
 
-        assertThat(도매.받은날짜).containsExactly(
-            LocalDate.of(2026, 9, 20), LocalDate.of(2026, 9, 19), LocalDate.of(2026, 9, 18),
-            LocalDate.of(2026, 9, 17), LocalDate.of(2026, 9, 16),
-        )
+        schedule.runDaily()
+
+        assertThat(range.receivedRange).isEqualTo(today.minusDays(5) to today.minusDays(1))
     }
 
     @Test
-    fun `소매는 21품목을 D-5부터 D-1 기간으로 한 번씩 수집한다`() {
-        schedule.collect(오늘)
+    fun `겹치면 건너뛰는 쪽을 쓴다`() {
+        schedule.runDaily()
 
-        assertThat(소매.받은요청).hasSize(21)
-        assertThat(소매.받은요청.map { it.first }).isEqualTo(RETAIL_ITEMS)
-        assertThat(소매.받은요청.map { it.second to it.third })
-            .containsOnly(LocalDate.of(2026, 9, 16) to LocalDate.of(2026, 9, 20))
-    }
-
-    @Test
-    fun `하루 실행 기록은 도매 5건 소매 21건이다`() {
-        val runs = schedule.collect(오늘)
-
-        assertThat(runs).hasSize(26)
+        // collectAll 이 아니라 collectAllIfIdle 을 불러야 백필 중에 예외가 터지지 않는다
+        assertThat(range.receivedRange).isNotNull()
     }
 }

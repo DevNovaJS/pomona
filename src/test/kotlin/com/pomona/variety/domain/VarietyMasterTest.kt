@@ -15,7 +15,7 @@ class VarietyMasterTest {
 
     @Autowired private lateinit var em: EntityManager
 
-    private fun 시험용품종(sclsfCd: String = "01", sclsfNm: String? = "시험홍로") = VarietyMaster(
+    private fun sampleVariety(sclsfCd: String = "01", sclsfNm: String? = "시험홍로") = VarietyMaster(
         lclsfCd = "ZZ", lclsfNm = "시험대분류",
         mclsfCd = "ZZ", mclsfNm = "시험중분류",
         sclsfCd = sclsfCd, sclsfNm = sclsfNm,
@@ -23,7 +23,7 @@ class VarietyMasterTest {
 
     @Test
     fun `저장하면 DB 가 id 를 매겨준다`() {
-        val variety = 시험용품종()
+        val variety = sampleVariety()
         assertThat(variety.id).isNull()
 
         em.persist(variety)
@@ -34,7 +34,7 @@ class VarietyMasterTest {
 
     @Test
     fun `저장한 값이 그대로 돌아온다`() {
-        val variety = 시험용품종()
+        val variety = sampleVariety()
         em.persist(variety)
         em.flush()
         em.clear()
@@ -49,7 +49,7 @@ class VarietyMasterTest {
     @Test
     fun `품종명이 null 이어도 저장된다`() {
         // 실측: 12,175행 중 22행이 gds_sclsf_nm 을 null 로 준다.
-        val variety = 시험용품종(sclsfNm = null)
+        val variety = sampleVariety(sclsfNm = null)
 
         em.persist(variety)
         em.flush()
@@ -61,7 +61,7 @@ class VarietyMasterTest {
     @Test
     fun `영속화 전후로 hashCode 가 변하지 않는다`() {
         // data class 였다면 id 가 equals·hashCode 에 들어가 persist 시점에 값이 바뀐다.
-        val variety = 시험용품종()
+        val variety = sampleVariety()
         val before = variety.hashCode()
 
         em.persist(variety)
@@ -72,7 +72,7 @@ class VarietyMasterTest {
 
     @Test
     fun `자연키가 같으면 같은 품종으로 본다`() {
-        assertThat(시험용품종()).isEqualTo(시험용품종())
-        assertThat(시험용품종(sclsfCd = "02")).isNotEqualTo(시험용품종(sclsfCd = "03"))
+        assertThat(sampleVariety()).isEqualTo(sampleVariety())
+        assertThat(sampleVariety(sclsfCd = "02")).isNotEqualTo(sampleVariety(sclsfCd = "03"))
     }
 }

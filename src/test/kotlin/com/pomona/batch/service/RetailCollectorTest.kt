@@ -41,32 +41,32 @@ class RetailCollectorTest {
     )
     private val collector by lazy { RetailCollector(client, retail, runs) }
 
-    private val 사과 = RetailItem(ctgryCd = "400", itemCd = "411", name = "사과")
-    private val 배 = RetailItem(ctgryCd = "400", itemCd = "412", name = "배")
+    private val apple = RetailItem(ctgryCd = "400", itemCd = "411", name = "사과")
+    private val pear = RetailItem(ctgryCd = "400", itemCd = "412", name = "배")
 
     /** 픽스처의 조사일자 */
-    private val 날짜 = LocalDate.of(2026, 9, 7)
-    private val 시작 = 날짜.minusDays(4)
+    private val day = LocalDate.of(2026, 9, 7)
+    private val from = day.minusDays(4)
 
     private fun fixture(name: String): String =
         checkNotNull(javaClass.getResource("/datago/$name")) { "픽스처 없음: $name" }.readText()
 
-    private fun 응답(name: String) {
+    private fun respondWith(name: String) {
         server.expect(requestTo(containsString("cond%5Bitem_cd%3A%3AEQ%5D=411")))
             .andRespond(withSuccess(fixture(name), MediaType.APPLICATION_JSON))
     }
 
-    private fun 소매행수(itemCd: String) = jdbc.queryForObject(
+    private fun retailRowCount(itemCd: String) = jdbc.queryForObject(
         "select count(*) from retail_daily where item_cd = ? and exmn_ymd between ? and ?",
-        Int::class.java, itemCd, 시작, 날짜,
+        Int::class.java, itemCd, from, day,
     )
 
-    private fun 기존행심기(item: RetailItem) {
+    private fun plantExistingRow(item: RetailItem) {
         retail.replaceRange(
-            "01", item.ctgryCd, item.itemCd, 시작, 날짜,
+            "01", item.ctgryCd, item.itemCd, from, day,
             listOf(
                 RetailDailyRow(
-                    exmnYmd = 날짜, seCd = "01", seNm = "소매",
+                    exmnYmd = day, seCd = "01", seNm = "소매",
                     ctgryCd = item.ctgryCd, ctgryNm = "과일류", itemCd = item.itemCd, itemNm = item.name,
                     vrtyCd = "99", vrtyNm = "옛품종", grdCd = "04", grdNm = "상품",
                     sggCd = "9999", sggNm = "시험시", mrktCd = "9999999", mrktNm = "시험점포",
@@ -78,59 +78,59 @@ class RetailCollectorTest {
 
     @Test
     fun `정상 응답이면 그대로 저장하고 SUCCESS 로 기록한다`() {
-        응답("perday-price-2rows.json")
+        respondWith("perday-price-2rows.json")
 
-        val run = collector.collect(사과, 시작, 날짜)
+        val run = collector.collect(apple, from, day)
 
         server.verify()
         assertThat(run.status).isEqualTo(BatchStatus.SUCCESS)
         assertThat(run.rowCount).isEqualTo(2)        // 소매는 접지 않으므로 응답 행 수 그대로
-        assertThat(소매행수("411")).isEqualTo(2)
+        assertThat(retailRowCount("411")).isEqualTo(2)
         assertThat(run.params).contains("411")
     }
 
     @Test
     fun `조사가 없으면 그 품목 기간의 기존 행을 지우고 EMPTY 로 기록한다`() {
-        기존행심기(사과)
-        응답("perday-price-empty.json")
+        plantExistingRow(apple)
+        respondWith("perday-price-empty.json")
 
-        val run = collector.collect(사과, 시작, 날짜)
+        val run = collector.collect(apple, from, day)
 
         assertThat(run.status).isEqualTo(BatchStatus.EMPTY)
-        assertThat(소매행수("411")).isZero()
+        assertThat(retailRowCount("411")).isZero()
     }
 
     @Test
     fun `API 가 오류를 주면 기존 행을 건드리지 않고 FAILED 와 사유를 기록한다`() {
-        기존행심기(사과)
-        응답("perday-price-error.json")
+        plantExistingRow(apple)
+        respondWith("perday-price-error.json")
 
-        val run = collector.collect(사과, 시작, 날짜)
+        val run = collector.collect(apple, from, day)
 
         assertThat(run.status).isEqualTo(BatchStatus.FAILED)
         assertThat(run.message).contains("SERVICE_KEY_IS_NOT_REGISTERED_ERROR")
-        assertThat(소매행수("411")).isEqualTo(1)
+        assertThat(retailRowCount("411")).isEqualTo(1)
     }
 
     @Test
     fun `다른 품목은 건드리지 않는다`() {
-        기존행심기(배)
-        응답("perday-price-empty.json")
+        plantExistingRow(pear)
+        respondWith("perday-price-empty.json")
 
-        collector.collect(사과, 시작, 날짜)
+        collector.collect(apple, from, day)
 
-        assertThat(소매행수("412")).isEqualTo(1)
+        assertThat(retailRowCount("412")).isEqualTo(1)
     }
 
     @Test
     fun `실행 기록에 품목과 기간이 남는다`() {
-        응답("perday-price-2rows.json")
+        respondWith("perday-price-2rows.json")
 
-        val run = collector.collect(사과, 시작, 날짜)
+        val run = collector.collect(apple, from, day)
 
         val saved = runs.findById(run.id!!).get()
         assertThat(saved.jobName).isEqualTo("retail-daily")
-        assertThat(saved.targetDate).isEqualTo(날짜)          // 기간의 마지막 날
+        assertThat(saved.targetDate).isEqualTo(day)          // 기간의 마지막 날
         assertThat(saved.params).contains("2026-09-03").contains("2026-09-07")
     }
 
