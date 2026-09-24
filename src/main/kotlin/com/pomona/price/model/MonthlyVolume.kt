@@ -25,3 +25,16 @@ data class MonthlyVolume(
     /** 그 달 거래 물량 합계(kg) */
     val qty: BigDecimal,
 )
+
+/**
+ * 품목 하나의 한 달 물량을 국산·수입으로 나눈 것. 품목 페이지의 12개월 막대(국산·수입 쌓기)에 쓴다.
+ * 품목 안의 기타·소량 품종까지 전부 합친다.
+ */
+data class ItemMonthlyVolume(
+    val lclsfCd: String,
+    val mclsfCd: String,
+    val month: YearMonth,
+    val origin: Origin,
+    /** 그 달 거래 물량 합계(kg) */
+    val qty: BigDecimal,
+)

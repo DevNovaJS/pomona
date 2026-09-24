@@ -1,5 +1,6 @@
 package com.pomona.price.domain
 
+import com.pomona.price.model.ItemMonthlyVolume
 import com.pomona.price.model.MonthlyVolume
 import com.pomona.price.model.Origin
 import com.pomona.price.model.WholesaleDailyRow
@@ -31,8 +32,11 @@ class MonthlyVolumeRepositoryTest {
     private val domesticOrigin = "367000"   // 충북 괴산군
     private val importOrigin = "800CL"      // 칠레
 
-    private fun plantVariety(sclsfCd: String) =
-        varieties.upsert(VarietyUpsert("ZZ", "시험대분류", "ZZ", "시험중분류", sclsfCd, "시험품종$sclsfCd"))
+    private val jan = YearMonth.of(2099, 1)
+    private val feb = YearMonth.of(2099, 2)
+
+    private fun plantVariety(mclsfCd: String, sclsfCd: String) =
+        varieties.upsert(VarietyUpsert("ZZ", "시험대분류", mclsfCd, "시험중분류$mclsfCd", sclsfCd, "시험품종$sclsfCd"))
 
     private fun row(varietyId: Long, date: LocalDate, plorCd: String, qty: String) = WholesaleDailyRow(
         trdClclnYmd = date, whslMrktCd = garak, varietyId = varietyId,
@@ -41,91 +45,106 @@ class MonthlyVolumeRepositoryTest {
         lowPrcPerKg = BigDecimal.ONE, highPrcPerKg = BigDecimal.ONE, tradeCount = 1,
     )
 
-    /** 날짜별로 묶어 그 날짜를 채운다. 쓰기 레포가 날짜 단위로 교체하기 때문이다. */
+    /** 날짜별로 묶어 그 날짜를 채운다. 쓰기 레포가 날짜 단위로 교체하므로 품종이 여럿이면 한 번에 넣어야 한다. */
     private fun plant(vararg rows: WholesaleDailyRow) {
         rows.groupBy { it.trdClclnYmd }.forEach { (date, sameDay) -> wholesale.replaceDay(date, garak, sameDay) }
     }
 
-    private fun volume(varietyId: Long, month: String, origin: Origin, qty: String) =
-        MonthlyVolume(varietyId, YearMonth.parse(month), origin, BigDecimal(qty))
+    private fun volume(varietyId: Long, month: YearMonth, origin: Origin, qty: String) =
+        MonthlyVolume(varietyId, month, origin, BigDecimal(qty))
+
+    private fun itemVolume(mclsfCd: String, month: YearMonth, origin: Origin, qty: String) =
+        ItemMonthlyVolume("ZZ", mclsfCd, month, origin, BigDecimal(qty))
 
     @Test
-    fun `품종 하나의 월별 물량을 국산과 수입으로 나눠 준다`() {
-        val id = plantVariety("01")
+    fun `품종 전부의 월별 물량을 국산과 수입으로 나눠 달 순 물량 많은 순으로 준다`() {
+        val a = plantVariety("01", "01")
+        val b = plantVariety("01", "02")
         plant(
-            row(id, LocalDate.of(2099, 1, 5), domesticOrigin, "100.000"),
-            row(id, LocalDate.of(2099, 1, 6), domesticOrigin, "50.500"),
-            row(id, LocalDate.of(2099, 1, 6), importOrigin, "30.000"),
-            row(id, LocalDate.of(2099, 2, 3), domesticOrigin, "70.000"),
+            row(a, LocalDate.of(2099, 1, 5), domesticOrigin, "100.000"),
+            row(a, LocalDate.of(2099, 1, 6), domesticOrigin, "50.500"),
+            row(a, LocalDate.of(2099, 1, 6), importOrigin, "30.000"),
+            row(b, LocalDate.of(2099, 1, 7), domesticOrigin, "200.000"),
+            row(a, LocalDate.of(2099, 2, 3), domesticOrigin, "70.000"),
         )
 
-        val result = volumes.findByVariety(id, YearMonth.of(2099, 1), YearMonth.of(2099, 2))
+        val result = volumes.findAll(jan, feb)
 
         // 물량 컬럼이 numeric(14,3) 이라 합계도 소수 3자리로 온다
         assertThat(result).containsExactly(
-            volume(id, "2099-01", Origin.DOMESTIC, "150.500"),
-            volume(id, "2099-01", Origin.IMPORT, "30.000"),
-            volume(id, "2099-02", Origin.DOMESTIC, "70.000"),
+            volume(b, jan, Origin.DOMESTIC, "200.000"),
+            volume(a, jan, Origin.DOMESTIC, "150.500"),
+            volume(a, jan, Origin.IMPORT, "30.000"),
+            volume(a, feb, Origin.DOMESTIC, "70.000"),
         )
     }
 
     @Test
     fun `조회 기간 밖의 달은 들어가지 않는다`() {
-        val id = plantVariety("01")
+        val id = plantVariety("01", "01")
         plant(
             row(id, LocalDate.of(2099, 1, 5), domesticOrigin, "100.000"),
             row(id, LocalDate.of(2099, 2, 3), domesticOrigin, "70.000"),
         )
 
-        val result = volumes.findByVariety(id, YearMonth.of(2099, 1), YearMonth.of(2099, 1))
-
-        assertThat(result.map { it.month }).containsOnly(YearMonth.of(2099, 1))
+        assertThat(volumes.findAll(jan, jan).map { it.month }).containsOnly(jan)
     }
 
     @Test
     fun `월말과 다음 달 첫날은 다른 달로 센다`() {
-        val id = plantVariety("01")
+        val id = plantVariety("01", "01")
         plant(
             row(id, LocalDate.of(2099, 1, 31), domesticOrigin, "10.000"),
             row(id, LocalDate.of(2099, 2, 1), domesticOrigin, "20.000"),
         )
 
-        val result = volumes.findByVariety(id, YearMonth.of(2099, 1), YearMonth.of(2099, 2))
-
-        assertThat(result.map { it.month to it.qty.toInt() })
-            .containsExactly(YearMonth.of(2099, 1) to 10, YearMonth.of(2099, 2) to 20)
+        assertThat(volumes.findAll(jan, feb).map { it.month to it.qty.toInt() })
+            .containsExactly(jan to 10, feb to 20)
     }
 
     @Test
-    fun `한 달의 품종별 물량을 많은 순으로 주고 국산과 수입은 따로 줄을 세운다`() {
-        val a = plantVariety("01")
-        val b = plantVariety("02")
+    fun `품목 물량은 기타 품종까지 품목 안의 품종을 전부 합친다`() {
+        val fuji = plantVariety("01", "01")
+        val other = plantVariety("01", "99")
+        val pear = plantVariety("02", "01")
         plant(
-            row(a, LocalDate.of(2099, 1, 5), domesticOrigin, "150.000"),
-            row(a, LocalDate.of(2099, 1, 5), importOrigin, "30.000"),
-            row(b, LocalDate.of(2099, 1, 6), domesticOrigin, "200.000"),
+            row(fuji, LocalDate.of(2099, 1, 5), domesticOrigin, "100.000"),
+            row(other, LocalDate.of(2099, 1, 5), domesticOrigin, "5.000"),
+            row(fuji, LocalDate.of(2099, 1, 6), importOrigin, "30.000"),
+            row(pear, LocalDate.of(2099, 1, 6), domesticOrigin, "40.000"),
+            row(fuji, LocalDate.of(2099, 2, 3), domesticOrigin, "70.000"),
         )
 
-        val result = volumes.findByMonth(YearMonth.of(2099, 1))
-
-        assertThat(result.map { Triple(it.varietyId, it.origin, it.qty.toInt()) }).containsExactly(
-            Triple(b, Origin.DOMESTIC, 200),
-            Triple(a, Origin.DOMESTIC, 150),
-            Triple(a, Origin.IMPORT, 30),
+        assertThat(volumes.findItems(jan, feb)).containsExactly(
+            itemVolume("01", jan, Origin.DOMESTIC, "105.000"),
+            itemVolume("01", jan, Origin.IMPORT, "30.000"),
+            itemVolume("01", feb, Origin.DOMESTIC, "70.000"),
+            itemVolume("02", jan, Origin.DOMESTIC, "40.000"),
         )
     }
 
     @Test
-    fun `그 달의 시장 거래일 수를 센다`() {
-        // 이번 달처럼 덜 찬 달을 화면이 알아보게 하려고 준다. 품종·원산지와 상관없는 시장 전체 값이다.
-        val a = plantVariety("01")
-        val b = plantVariety("02")
+    fun `기타 품목은 품목 물량에서 빠진다`() {
+        val otherItem = plantVariety("99", "98")
+        plant(row(otherItem, LocalDate.of(2099, 1, 5), importOrigin, "100.000"))
+
+        assertThat(volumes.findItems(jan, jan)).isEmpty()
+    }
+
+    @Test
+    fun `달마다 시장 거래일 수를 센다`() {
+        // 품종·원산지와 상관없는 시장 전체 값이다
+        val a = plantVariety("01", "01")
+        val b = plantVariety("01", "02")
         plant(
             row(a, LocalDate.of(2099, 1, 5), domesticOrigin, "1.000"),
             row(b, LocalDate.of(2099, 1, 5), domesticOrigin, "1.000"),
             row(a, LocalDate.of(2099, 1, 6), importOrigin, "1.000"),
+            row(a, LocalDate.of(2099, 3, 2), domesticOrigin, "1.000"),
         )
 
-        assertThat(volumes.countTradingDays(YearMonth.of(2099, 1))).isEqualTo(2)
+        // 거래가 없는 2월은 들어가지 않는다
+        assertThat(volumes.countTradingDays(jan, YearMonth.of(2099, 3)))
+            .containsExactlyInAnyOrderEntriesOf(mapOf(jan to 2, YearMonth.of(2099, 3) to 1))
     }
 }

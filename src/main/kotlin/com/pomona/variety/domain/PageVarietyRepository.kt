@@ -1,5 +1,6 @@
 package com.pomona.variety.domain
 
+import com.pomona.variety.model.OTHER_CODE
 import com.pomona.variety.model.PageVariety
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
@@ -31,12 +32,6 @@ private const val MIN_TRADE_DAYS = 10
 private const val MIN_QTY_KG = 1_000
 
 /**
- * 기타 코드. 소분류 `99` 는 품목마다 있는 '기타' 칸이고, 중분류 `99` 는 '기타' 품목이다.
- * 중분류 `99` 아래의 `과실류(수입)` 은 이름에 '기타' 가 없어 이름으로 거르면 빠져나가므로 코드로 가른다.
- */
-private const val OTHER = "99"
-
-/**
  * `group by v.id` 만 두고 `v` 의 다른 컬럼을 select 한다. id 가 PK 라 나머지 컬럼이 id 에 딸려 있다는 걸
  * PostgreSQL 이 알아서 허용한다. 바인딩은 (1년 전 날짜, 기준일) 이고 1년 전 날짜는 빼고 센다.
  */
@@ -46,8 +41,8 @@ private const val SQL = """
       join wholesale_daily d on d.variety_id = v.id
      where d.trd_clcln_ymd > ?
        and d.trd_clcln_ymd <= ?
-       and v.mclsf_cd <> '$OTHER'
-       and v.sclsf_cd <> '$OTHER'
+       and v.mclsf_cd <> '$OTHER_CODE'
+       and v.sclsf_cd <> '$OTHER_CODE'
      group by v.id
     having count(distinct d.trd_clcln_ymd) >= $MIN_TRADE_DAYS
        and sum(d.tot_qty) >= $MIN_QTY_KG
