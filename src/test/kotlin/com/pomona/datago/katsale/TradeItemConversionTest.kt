@@ -17,6 +17,7 @@ class TradeItemConversionTest {
     /** 정산정보 한 행. 바꾸고 싶은 값만 이름으로 넘긴다. */
     private fun trade(
         grdCd: String? = "11",
+        grdNm: String? = "특",
         plorCd: String? = "367000",
         plorNm: String? = "충청북도 괴산군",
         unitQty: String? = "10.000",
@@ -34,7 +35,7 @@ class TradeItemConversionTest {
         trdSe = "경매", unitCd = "12", unitNm = "kg",
         unitQty = unitQty, unitTotQty = unitTotQty,
         pkgCd = "101", pkgNm = null, szCd = "100", szNm = ".",
-        grdCd = grdCd, grdNm = "특",
+        grdCd = grdCd, grdNm = grdNm,
         plorCd = plorCd, plorNm = plorNm,
         totprc = totprc, avgprc = "0.000", lwprc = lwprc, hgprc = hgprc,
     )
@@ -99,6 +100,13 @@ class TradeItemConversionTest {
 
         assertThat(row.lowPrcPerKg).isEqualByComparingTo("1913.04")
         assertThat(row.highPrcPerKg).isEqualByComparingTo("1913.05")
+    }
+
+    @Test
+    fun `등급 코드 10 은 이름이 점으로 와서 표기미상으로 바꾼다`() {
+        val row = listOf(trade(grdCd = "10", grdNm = ".")).toWholesaleRows(varietyIds).single()
+
+        assertThat(row.grdNm).isEqualTo("표기미상")
     }
 
     @Test

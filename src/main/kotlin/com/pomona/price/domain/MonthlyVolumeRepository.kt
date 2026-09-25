@@ -56,11 +56,6 @@ class MonthlyVolumeRepository(private val jdbc: JdbcTemplate) {
             .toMap()
 }
 
-private fun YearMonth.firstDay(): LocalDate = atDay(1)
-
-/** 끝을 "다음 달 1일 미만" 으로 잡는다. 월말 날짜 계산(28~31일)을 신경 쓸 필요가 없다. */
-private fun YearMonth.nextFirstDay(): LocalDate = plusMonths(1).atDay(1)
-
 private fun ResultSet.getMonth(): YearMonth = YearMonth.from(getObject("month", LocalDate::class.java))
 
 private fun ResultSet.getOrigin(): Origin = Origin.valueOf(getString("origin"))

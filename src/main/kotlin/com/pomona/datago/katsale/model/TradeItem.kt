@@ -78,7 +78,14 @@ data class TradeItem(
         unitNm = need(unitNm, "unit_nm"),
     )
 
-    fun gradeName(): String = need(grdNm, "grd_nm")
+    /**
+     * 등급명. 코드 `10` 은 이름이 `.` 으로 와서 '표기미상' 으로 바꾼다. 무등급은 `1Z` 로 따로 있으니
+     * 무등급과 같은 뜻이라고 볼 수 없다. 실측 6개월 물량의 1.6%.
+     */
+    fun gradeName(): String = when (grdCd) {
+        UNMARKED_GRADE_CODE -> UNMARKED_GRADE_NAME
+        else -> need(grdNm, "grd_nm")
+    }
 
     /** 원산지명. 실측 12% 에 꼬리 공백이 붙어 오고 17행은 null 이다. */
     fun originName(): String? = plorNm?.trim()
@@ -101,6 +108,9 @@ data class TradeItem(
     private fun need(value: String?, field: String): String =
         value ?: error("정산정보 $field 값이 비었다: $this")
 }
+
+private const val UNMARKED_GRADE_CODE = "10"
+private const val UNMARKED_GRADE_NAME = "표기미상"
 
 /** 도매 집계의 자연키. 정산일자·시장·품종·매매구분·등급·산지·단위. */
 data class WholesaleKey(
