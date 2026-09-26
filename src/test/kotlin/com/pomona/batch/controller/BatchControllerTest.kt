@@ -66,8 +66,11 @@ class BatchControllerTest {
     }
 
     @Test
-    fun `없는 실행을 재실행하면 404`() {
-        mockMvc.post("/api/admin/batch/runs/-1/retry").andExpect { status { isNotFound() } }
+    fun `없는 실행을 재실행하면 404 와 사유를 준다`() {
+        mockMvc.post("/api/admin/batch/runs/-1/retry").andExpect {
+            status { isNotFound() }
+            jsonPath("$.message") { value("실행 기록이 없다: -1") }
+        }
     }
 
     @Test

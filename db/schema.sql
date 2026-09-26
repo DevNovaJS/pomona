@@ -189,3 +189,39 @@ comment on column batch_run.finished_at is '종료 시각. 진행 중이면 NULL
 
 -- 백오피스의 "최신 수집일" 과 "최근 실행 이력" 이 이 인덱스 하나로 해결된다
 create index if not exists ix_batch_run_job_date on batch_run (job_name, target_date desc);
+
+
+-- ---------------------------------------------------------------------------
+-- review : 직접 먹은 과일 리뷰
+-- API 출처 없음. 백오피스에서 쓰고, 공개면 빌드가 전부 가져가 목록·상세 페이지를 만든다.
+-- 임시저장이 없다 — 저장하면 다음 빌드에 공개된다.
+-- 리뷰는 많아야 수백 건이라 품종별로 찾아도 테이블 전체를 읽는 게 빠르므로 인덱스를 걸지 않는다.
+-- ---------------------------------------------------------------------------
+create table if not exists review (
+    id          bigserial    primary key,
+    variety_id  bigint       not null references variety_master (id),
+    eaten_date  date         not null,
+    title       varchar(100) not null,
+    store       varchar(100) not null,
+    origin      varchar(100),
+    price       integer      not null,
+    weight_gram integer,
+    rating      smallint     not null,
+    body        text         not null,
+    created_at  timestamptz  not null default now(),
+    updated_at  timestamptz  not null default now(),
+
+    constraint ck_review_price  check (price > 0),
+    constraint ck_review_weight check (weight_gram > 0),
+    constraint ck_review_rating check (rating between 0 and 5)
+);
+
+comment on table  review            is '직접 먹은 과일 리뷰';
+comment on column review.variety_id is '품종. 상세에 붙는 그날 도매 시세를 이 품종으로 찾는다';
+comment on column review.eaten_date is '먹은 날. 도매 시세는 이날 또는 그 전 마지막 거래일 값을 붙인다';
+comment on column review.title      is '목록과 검색 결과에 나오는 제목';
+comment on column review.store      is '산 곳';
+comment on column review.origin     is '포장에 적힌 산지. 안 적혀 있으면 NULL';
+comment on column review.price      is '산 가격(원)';
+comment on column review.weight_gram is '산 무게(g). 바나나 한 송이처럼 모르면 NULL. 있으면 kg당 가격을 계산해 도매가와 나란히 보여준다';
+comment on column review.rating     is '별점 0~5';

@@ -1,13 +1,10 @@
 package com.pomona.batch.controller
 
-import com.pomona.batch.model.BatchOverview
-import com.pomona.batch.model.BatchRunView
+import com.pomona.batch.model.BatchOverviewResponse
+import com.pomona.batch.model.BatchRunResponse
 import com.pomona.batch.service.BatchAdminService
-import com.pomona.batch.service.BatchRunNotFoundException
-import com.pomona.batch.service.CollectAlreadyRunningException
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -23,16 +20,16 @@ import java.time.LocalDate
 class BatchController(private val batchAdminService: BatchAdminService) {
 
     @GetMapping("/status")
-    fun status(): BatchOverview = batchAdminService.overview()
+    fun status(): BatchOverviewResponse = batchAdminService.overview()
 
     @GetMapping("/runs")
-    fun recentRuns(): List<BatchRunView> = batchAdminService.recentRuns()
+    fun recentRuns(): List<BatchRunResponse> = batchAdminService.recentRuns()
 
     @GetMapping("/failures")
-    fun failures(): List<BatchRunView> = batchAdminService.failures()
+    fun failures(): List<BatchRunResponse> = batchAdminService.failures()
 
     @PostMapping("/runs/{id}/retry")
-    fun retry(@PathVariable id: Long): BatchRunView = batchAdminService.retry(id)
+    fun retry(@PathVariable id: Long): BatchRunResponse = batchAdminService.retry(id)
 
     /** 뒤에서 돌리므로 끝을 기다리지 않고 202 를 준다. */
     @PostMapping("/collect")
@@ -43,12 +40,4 @@ class BatchController(private val batchAdminService: BatchAdminService) {
     ) {
         batchAdminService.collect(from, to)
     }
-
-    @ExceptionHandler(BatchRunNotFoundException::class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    fun notFound(e: BatchRunNotFoundException): Map<String, String?> = mapOf("message" to e.message)
-
-    @ExceptionHandler(CollectAlreadyRunningException::class)
-    @ResponseStatus(HttpStatus.CONFLICT)
-    fun alreadyRunning(e: CollectAlreadyRunningException): Map<String, String?> = mapOf("message" to e.message)
 }
