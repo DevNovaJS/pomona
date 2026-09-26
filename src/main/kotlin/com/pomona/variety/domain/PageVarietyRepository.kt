@@ -14,11 +14,11 @@ import java.time.LocalDate
  * 12개월로 잡는 건 감홍처럼 제철이 짧은 품종도 한 철은 들어오게 하려는 것이다.
  */
 @Repository
-class PageVarietyRepository(private val jdbc: JdbcTemplate) {
+class PageVarietyRepository(private val jdbcTemplate: JdbcTemplate) {
 
     /** 품목 코드 순, 품목 안에서는 12개월 물량이 많은 순. 품목 페이지의 품종 목록이 이 순서를 그대로 쓴다. */
     fun findAll(end: LocalDate): List<PageVariety> =
-        jdbc.query(SQL, { rs, _ ->
+        jdbcTemplate.query(SQL, { rs, _ ->
             PageVariety(
                 id = rs.getLong("id"),
                 lclsfCd = rs.getString("lclsf_cd"), lclsfNm = rs.getString("lclsf_nm"),

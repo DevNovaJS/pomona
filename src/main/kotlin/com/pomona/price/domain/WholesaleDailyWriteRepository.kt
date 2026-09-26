@@ -17,7 +17,7 @@ import java.time.LocalDate
  * 1년치(29만 행)에서 잰 값: 날짜 하나(844행) 지우고 넣기 약 6.6ms, 같은 행 upsert 11.8ms.
  */
 @Repository
-class WholesaleDailyWriteRepository(private val jdbc: JdbcTemplate) {
+class WholesaleDailyWriteRepository(private val jdbcTemplate: JdbcTemplate) {
 
     /**
      * [date]·[marketCode] 의 행을 전부 지우고 [rows] 로 채운다. 한 트랜잭션이라
@@ -26,7 +26,7 @@ class WholesaleDailyWriteRepository(private val jdbc: JdbcTemplate) {
      */
     @Transactional
     fun replaceDay(date: LocalDate, marketCode: String, rows: Collection<WholesaleDailyRow>): Int {
-        jdbc.update(DELETE, date, marketCode)
+        jdbcTemplate.update(DELETE, date, marketCode)
         if (rows.isEmpty()) {
             return 0
         }
@@ -38,7 +38,7 @@ class WholesaleDailyWriteRepository(private val jdbc: JdbcTemplate) {
                 it.lowPrcPerKg, it.highPrcPerKg, it.tradeCount,
             )
         }
-        return jdbc.batchUpdate(INSERT, args, TYPES).sum()
+        return jdbcTemplate.batchUpdate(INSERT, args, TYPES).sum()
     }
 }
 

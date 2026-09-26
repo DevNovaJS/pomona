@@ -20,9 +20,9 @@ import java.time.LocalDate
 @Import(VarietyUpsertRepository::class, WholesaleDailyWriteRepository::class, PageVarietyRepository::class)
 class PageVarietyRepositoryTest {
 
-    @Autowired private lateinit var varieties: VarietyUpsertRepository
-    @Autowired private lateinit var wholesale: WholesaleDailyWriteRepository
-    @Autowired private lateinit var pages: PageVarietyRepository
+    @Autowired private lateinit var varietyUpsertRepository: VarietyUpsertRepository
+    @Autowired private lateinit var wholesaleDailyWriteRepository: WholesaleDailyWriteRepository
+    @Autowired private lateinit var pageVarietyRepository: PageVarietyRepository
 
     private val garak = "110001"
 
@@ -31,7 +31,7 @@ class PageVarietyRepositoryTest {
     private val firstDay = LocalDate.of(2099, 1, 1)
 
     private fun plantVariety(mclsfCd: String, sclsfCd: String) =
-        varieties.upsert(VarietyUpsert("ZZ", "시험대분류", mclsfCd, "시험중분류$mclsfCd", sclsfCd, "시험품종$sclsfCd"))
+        varietyUpsertRepository.upsert(VarietyUpsert("ZZ", "시험대분류", mclsfCd, "시험중분류$mclsfCd", sclsfCd, "시험품종$sclsfCd"))
 
     private fun row(varietyId: Long, date: LocalDate, qty: String) = WholesaleDailyRow(
         trdClclnYmd = date, whslMrktCd = garak, varietyId = varietyId,
@@ -46,10 +46,10 @@ class PageVarietyRepositoryTest {
 
     /** 날짜별로 묶어 그 날짜를 채운다. 쓰기 레포가 날짜 단위로 교체하므로 품종이 여럿이면 한 번에 넣어야 한다. */
     private fun plant(rows: List<WholesaleDailyRow>) {
-        rows.groupBy { it.trdClclnYmd }.forEach { (date, sameDay) -> wholesale.replaceDay(date, garak, sameDay) }
+        rows.groupBy { it.trdClclnYmd }.forEach { (date, sameDay) -> wholesaleDailyWriteRepository.replaceDay(date, garak, sameDay) }
     }
 
-    private fun pageIds() = pages.findAll(end).map { it.id }
+    private fun pageIds() = pageVarietyRepository.findAll(end).map { it.id }
 
     @Test
     fun `거래일 10일 물량 1톤이면 들어간다`() {

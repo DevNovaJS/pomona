@@ -18,24 +18,24 @@ class DailyCollectScheduleTest {
         }
     }
 
-    private val range = FakeRangeCollector()
-    private val schedule = DailyCollectSchedule(range)
+    private val rangeCollector = FakeRangeCollector()
+    private val dailyCollectSchedule = DailyCollectSchedule(rangeCollector)
 
     @Test
     fun `D-5 부터 D-1 까지를 수집하라고 넘긴다`() {
         // 확정 지연: 전날치만 한 번 받으면 16% 가 영영 빠진다.
         val today = LocalDate.now(ZoneId.of("Asia/Seoul"))
 
-        schedule.runDaily()
+        dailyCollectSchedule.runDaily()
 
-        assertThat(range.receivedRange).isEqualTo(today.minusDays(5) to today.minusDays(1))
+        assertThat(rangeCollector.receivedRange).isEqualTo(today.minusDays(5) to today.minusDays(1))
     }
 
     @Test
     fun `겹치면 건너뛰는 쪽을 쓴다`() {
-        schedule.runDaily()
+        dailyCollectSchedule.runDaily()
 
         // collectAll 이 아니라 collectAllIfIdle 을 불러야 백필 중에 예외가 터지지 않는다
-        assertThat(range.receivedRange).isNotNull()
+        assertThat(rangeCollector.receivedRange).isNotNull()
     }
 }

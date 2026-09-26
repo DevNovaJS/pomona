@@ -15,11 +15,11 @@ import java.time.LocalDate
  * 페이지가 있는 품종은 반드시 값이 있다.
  */
 @Repository
-class LatestPriceRepository(private val jdbc: JdbcTemplate) {
+class LatestPriceRepository(private val jdbcTemplate: JdbcTemplate) {
 
     /** 12개월 안에 거래가 있는 품종 전부. 품종 id 순. */
     fun findAll(end: LocalDate): List<LatestPrice> =
-        jdbc.query(SQL, { rs, _ ->
+        jdbcTemplate.query(SQL, { rs, _ ->
             GradeTotal(
                 varietyId = rs.getLong("variety_id"),
                 date = rs.getObject("trd_clcln_ymd", LocalDate::class.java),

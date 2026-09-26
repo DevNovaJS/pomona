@@ -35,18 +35,18 @@ import java.time.LocalDate
 @Import(VarietyUpsertRepository::class, WholesaleDailyWriteRepository::class)
 class WholesaleCollectorTest {
 
-    @Autowired private lateinit var varieties: VarietyUpsertRepository
-    @Autowired private lateinit var wholesale: WholesaleDailyWriteRepository
-    @Autowired private lateinit var runs: BatchRunRepository
-    @Autowired private lateinit var jdbc: JdbcTemplate
+    @Autowired private lateinit var varietyUpsertRepository: VarietyUpsertRepository
+    @Autowired private lateinit var wholesaleDailyWriteRepository: WholesaleDailyWriteRepository
+    @Autowired private lateinit var batchRunRepository: BatchRunRepository
+    @Autowired private lateinit var jdbcTemplate: JdbcTemplate
 
     private val builder = RestClient.builder()
     private val server = MockRestServiceServer.bindTo(builder).build()
-    private val client = KatSaleClient(
+    private val katSaleClient = KatSaleClient(
         builder.build(),
         DataGoUriFactory(baseUrl = "https://apis.data.go.kr/B552845", serviceKey = "TEST%2BKEY%3D"),
     )
-    private val collector by lazy { WholesaleCollector(client, varieties, wholesale, runs) }
+    private val wholesaleCollector by lazy { WholesaleCollector(katSaleClient, varietyUpsertRepository, wholesaleDailyWriteRepository, batchRunRepository) }
 
     /** 픽스처의 정산일자 */
     private val day = LocalDate.of(2026, 9, 7)
@@ -63,12 +63,12 @@ class WholesaleCollectorTest {
     }
 
     private fun wholesaleRowCount() =
-        jdbc.queryForObject("select count(*) from wholesale_daily where trd_clcln_ymd = ?", Int::class.java, day)
+        jdbcTemplate.queryForObject("select count(*) from wholesale_daily where trd_clcln_ymd = ?", Int::class.java, day)
 
     /** 그 day에 이미 들어가 있던 행 하나 */
     private fun plantExistingRow() {
-        val varietyId = varieties.upsert(VarietyUpsert("ZZ", "시험", "ZZ", "시험", "01", "시험"))
-        wholesale.replaceDay(
+        val varietyId = varietyUpsertRepository.upsert(VarietyUpsert("ZZ", "시험", "ZZ", "시험", "01", "시험"))
+        wholesaleDailyWriteRepository.replaceDay(
             day, "110001",
             listOf(
                 WholesaleDailyRow(
@@ -85,7 +85,7 @@ class WholesaleCollectorTest {
     fun `정상 응답이면 집계해서 저장하고 SUCCESS 로 기록한다`() {
         respondWith(fruit = "katsale-trades-single-page.json", fruitVegetable = "katsale-trades-empty.json")
 
-        val run = collector.collect(day)
+        val run = wholesaleCollector.collect(day)
 
         server.verify()
         assertThat(run.status).isEqualTo(BatchStatus.SUCCESS)
@@ -100,7 +100,7 @@ class WholesaleCollectorTest {
         plantExistingRow()
         respondWith(fruit = "katsale-trades-empty.json", fruitVegetable = "katsale-trades-empty.json")
 
-        val run = collector.collect(day)
+        val run = wholesaleCollector.collect(day)
 
         assertThat(run.status).isEqualTo(BatchStatus.EMPTY)
         assertThat(wholesaleRowCount()).isZero()
@@ -112,7 +112,7 @@ class WholesaleCollectorTest {
         server.expect(requestTo(containsString("cond%5Bgds_lclsf_cd%3A%3AEQ%5D=06")))
             .andRespond(withSuccess(fixture("katsale-trades-error.json"), MediaType.APPLICATION_JSON))
 
-        val run = collector.collect(day)
+        val run = wholesaleCollector.collect(day)
 
         assertThat(run.status).isEqualTo(BatchStatus.FAILED)
         assertThat(run.message).contains("22")
@@ -123,9 +123,9 @@ class WholesaleCollectorTest {
     fun `실행 기록이 DB 에 남는다`() {
         respondWith(fruit = "katsale-trades-single-page.json", fruitVegetable = "katsale-trades-empty.json")
 
-        val run = collector.collect(day)
+        val run = wholesaleCollector.collect(day)
 
-        val saved = runs.findById(run.id!!).get()
+        val saved = batchRunRepository.findById(run.id!!).get()
         assertThat(saved.jobName).isEqualTo("wholesale-daily")
         assertThat(saved.targetDate).isEqualTo(day)
         assertThat(saved.status).isEqualTo(BatchStatus.SUCCESS)

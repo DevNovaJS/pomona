@@ -26,8 +26,8 @@ import kotlin.system.measureTimeMillis
 @EnabledIfEnvironmentVariable(named = "POMONA_BACKFILL", matches = "true")
 class BackfillTest {
 
-    @Autowired private lateinit var range: RangeCollector
-    @Autowired private lateinit var jdbc: JdbcTemplate
+    @Autowired private lateinit var rangeCollector: RangeCollector
+    @Autowired private lateinit var jdbcTemplate: JdbcTemplate
 
     @Test
     fun `과거 N개월을 수집한다`() {
@@ -37,7 +37,7 @@ class BackfillTest {
         println(">>> 백필 ${months}개월: $from ~ $to")
 
         val runs: List<com.pomona.batch.domain.BatchRun>
-        val elapsed = measureTimeMillis { runs = range.collectAll(from, to) }
+        val elapsed = measureTimeMillis { runs = rangeCollector.collectAll(from, to) }
 
         val byStatus = runs.groupingBy { it.status }.eachCount()
         println(">>> 걸린 시간 ${Duration.ofMillis(elapsed).toMinutes()}분 ${Duration.ofMillis(elapsed).toSecondsPart()}초")
@@ -50,11 +50,11 @@ class BackfillTest {
             "wholesale_daily" to "select count(*) from wholesale_daily",
             "retail_daily" to "select count(*) from retail_daily",
         ).forEach { (name, sql) ->
-            println(">>> $name ${jdbc.queryForObject(sql, Long::class.java)}행")
+            println(">>> $name ${jdbcTemplate.queryForObject(sql, Long::class.java)}행")
         }
-        println(">>> 도매 날짜 " + jdbc.queryForObject(
+        println(">>> 도매 날짜 " + jdbcTemplate.queryForObject(
             "select count(distinct trd_clcln_ymd) from wholesale_daily", Int::class.java) + "일")
-        println(">>> 소매 날짜 " + jdbc.queryForObject(
+        println(">>> 소매 날짜 " + jdbcTemplate.queryForObject(
             "select count(distinct exmn_ymd) from retail_daily", Int::class.java) + "일")
     }
 }

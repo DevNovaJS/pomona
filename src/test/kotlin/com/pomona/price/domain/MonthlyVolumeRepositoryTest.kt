@@ -24,9 +24,9 @@ import java.time.YearMonth
 @Import(VarietyUpsertRepository::class, WholesaleDailyWriteRepository::class, MonthlyVolumeRepository::class)
 class MonthlyVolumeRepositoryTest {
 
-    @Autowired private lateinit var varieties: VarietyUpsertRepository
-    @Autowired private lateinit var wholesale: WholesaleDailyWriteRepository
-    @Autowired private lateinit var volumes: MonthlyVolumeRepository
+    @Autowired private lateinit var varietyUpsertRepository: VarietyUpsertRepository
+    @Autowired private lateinit var wholesaleDailyWriteRepository: WholesaleDailyWriteRepository
+    @Autowired private lateinit var monthlyVolumeRepository: MonthlyVolumeRepository
 
     private val garak = "110001"
     private val domesticOrigin = "367000"   // 충북 괴산군
@@ -36,7 +36,7 @@ class MonthlyVolumeRepositoryTest {
     private val feb = YearMonth.of(2099, 2)
 
     private fun plantVariety(mclsfCd: String, sclsfCd: String) =
-        varieties.upsert(VarietyUpsert("ZZ", "시험대분류", mclsfCd, "시험중분류$mclsfCd", sclsfCd, "시험품종$sclsfCd"))
+        varietyUpsertRepository.upsert(VarietyUpsert("ZZ", "시험대분류", mclsfCd, "시험중분류$mclsfCd", sclsfCd, "시험품종$sclsfCd"))
 
     private fun row(varietyId: Long, date: LocalDate, plorCd: String, qty: String) = WholesaleDailyRow(
         trdClclnYmd = date, whslMrktCd = garak, varietyId = varietyId,
@@ -47,7 +47,7 @@ class MonthlyVolumeRepositoryTest {
 
     /** 날짜별로 묶어 그 날짜를 채운다. 쓰기 레포가 날짜 단위로 교체하므로 품종이 여럿이면 한 번에 넣어야 한다. */
     private fun plant(vararg rows: WholesaleDailyRow) {
-        rows.groupBy { it.trdClclnYmd }.forEach { (date, sameDay) -> wholesale.replaceDay(date, garak, sameDay) }
+        rows.groupBy { it.trdClclnYmd }.forEach { (date, sameDay) -> wholesaleDailyWriteRepository.replaceDay(date, garak, sameDay) }
     }
 
     private fun volume(varietyId: Long, month: YearMonth, origin: Origin, qty: String) =
@@ -68,7 +68,7 @@ class MonthlyVolumeRepositoryTest {
             row(a, LocalDate.of(2099, 2, 3), domesticOrigin, "70.000"),
         )
 
-        val result = volumes.findAll(jan, feb)
+        val result = monthlyVolumeRepository.findAll(jan, feb)
 
         // 물량 컬럼이 numeric(14,3) 이라 합계도 소수 3자리로 온다
         assertThat(result).containsExactly(
@@ -87,7 +87,7 @@ class MonthlyVolumeRepositoryTest {
             row(id, LocalDate.of(2099, 2, 3), domesticOrigin, "70.000"),
         )
 
-        assertThat(volumes.findAll(jan, jan).map { it.month }).containsOnly(jan)
+        assertThat(monthlyVolumeRepository.findAll(jan, jan).map { it.month }).containsOnly(jan)
     }
 
     @Test
@@ -98,7 +98,7 @@ class MonthlyVolumeRepositoryTest {
             row(id, LocalDate.of(2099, 2, 1), domesticOrigin, "20.000"),
         )
 
-        assertThat(volumes.findAll(jan, feb).map { it.month to it.qty.toInt() })
+        assertThat(monthlyVolumeRepository.findAll(jan, feb).map { it.month to it.qty.toInt() })
             .containsExactly(jan to 10, feb to 20)
     }
 
@@ -115,7 +115,7 @@ class MonthlyVolumeRepositoryTest {
             row(fuji, LocalDate.of(2099, 2, 3), domesticOrigin, "70.000"),
         )
 
-        assertThat(volumes.findItems(jan, feb)).containsExactly(
+        assertThat(monthlyVolumeRepository.findItems(jan, feb)).containsExactly(
             itemVolume("01", jan, Origin.DOMESTIC, "105.000"),
             itemVolume("01", jan, Origin.IMPORT, "30.000"),
             itemVolume("01", feb, Origin.DOMESTIC, "70.000"),
@@ -128,7 +128,7 @@ class MonthlyVolumeRepositoryTest {
         val otherItem = plantVariety("99", "98")
         plant(row(otherItem, LocalDate.of(2099, 1, 5), importOrigin, "100.000"))
 
-        assertThat(volumes.findItems(jan, jan)).isEmpty()
+        assertThat(monthlyVolumeRepository.findItems(jan, jan)).isEmpty()
     }
 
     @Test
@@ -144,7 +144,7 @@ class MonthlyVolumeRepositoryTest {
         )
 
         // 거래가 없는 2월은 들어가지 않는다
-        assertThat(volumes.countTradingDays(jan, YearMonth.of(2099, 3)))
+        assertThat(monthlyVolumeRepository.countTradingDays(jan, YearMonth.of(2099, 3)))
             .containsExactlyInAnyOrderEntriesOf(mapOf(jan to 2, YearMonth.of(2099, 3) to 1))
     }
 }

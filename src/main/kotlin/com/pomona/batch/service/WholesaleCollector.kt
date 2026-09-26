@@ -22,18 +22,18 @@ import java.time.LocalDate
 @Service
 class WholesaleCollector(
     private val katSaleClient: KatSaleClient,
-    private val varieties: VarietyUpsertRepository,
-    private val wholesale: WholesaleDailyWriteRepository,
+    private val varietyUpsertRepository: VarietyUpsertRepository,
+    private val wholesaleDailyWriteRepository: WholesaleDailyWriteRepository,
     private val batchRunRepository: BatchRunRepository,
 ) {
 
     /** [date] 하루치를 수집한다. 실패해도 예외를 던지지 않고 FAILED 로 기록해 돌려준다. */
     fun collect(date: LocalDate): BatchRun {
-        val run = batchRunRepository.save(BatchRun(jobName = JOB_NAME, targetDate = date, params = paramsOf(date)))
+        val run = batchRunRepository.save(BatchRun(jobName = WHOLESALE_JOB, targetDate = date, params = paramsOf(date)))
         try {
             val items = CATEGORIES.flatMap { katSaleClient.fetchAll(TradeRequest(date, GARAK, it)) }
-            val varietyIds = varieties.upsertAll(items.toVarieties())
-            val rowCount = wholesale.replaceDay(date, GARAK, items.toWholesaleRows(varietyIds))
+            val varietyIds = varietyUpsertRepository.upsertAll(items.toVarieties())
+            val rowCount = wholesaleDailyWriteRepository.replaceDay(date, GARAK, items.toWholesaleRows(varietyIds))
             run.succeed(rowCount)
         } catch (e: Exception) {
             log.error("도매 수집 실패: {}", date, e)
@@ -46,7 +46,8 @@ class WholesaleCollector(
         """{"date":"$date","market":"$GARAK","categories":[${CATEGORIES.joinToString(",") { "\"$it\"" }}]}"""
 }
 
-private const val JOB_NAME = "wholesale-daily"
+/** 실행 기록의 작업 이름. 재실행이 이 값으로 어느 수집기로 보낼지 가른다. */
+const val WHOLESALE_JOB = "wholesale-daily"
 
 /** 가락시장. 수집 범위는 가락 한 곳이다. */
 private const val GARAK = "110001"

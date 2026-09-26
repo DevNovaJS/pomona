@@ -20,9 +20,9 @@ import java.time.LocalDate
 @Import(VarietyUpsertRepository::class, WholesaleDailyWriteRepository::class, LatestPriceRepository::class)
 class LatestPriceRepositoryTest {
 
-    @Autowired private lateinit var varieties: VarietyUpsertRepository
-    @Autowired private lateinit var wholesale: WholesaleDailyWriteRepository
-    @Autowired private lateinit var prices: LatestPriceRepository
+    @Autowired private lateinit var varietyUpsertRepository: VarietyUpsertRepository
+    @Autowired private lateinit var wholesaleDailyWriteRepository: WholesaleDailyWriteRepository
+    @Autowired private lateinit var latestPriceRepository: LatestPriceRepository
 
     private val garak = "110001"
 
@@ -30,7 +30,7 @@ class LatestPriceRepositoryTest {
     private val end = LocalDate.of(2099, 12, 31)
 
     private fun plantVariety(sclsfCd: String) =
-        varieties.upsert(VarietyUpsert("ZZ", "시험대분류", "ZZ", "시험중분류", sclsfCd, "시험품종$sclsfCd"))
+        varietyUpsertRepository.upsert(VarietyUpsert("ZZ", "시험대분류", "ZZ", "시험중분류", sclsfCd, "시험품종$sclsfCd"))
 
     private fun row(
         varietyId: Long,
@@ -49,7 +49,7 @@ class LatestPriceRepositoryTest {
 
     /** 날짜별로 묶어 그 날짜를 채운다. 쓰기 레포가 날짜 단위로 교체하므로 품종이 여럿이면 한 번에 넣어야 한다. */
     private fun plant(vararg rows: WholesaleDailyRow) {
-        rows.groupBy { it.trdClclnYmd }.forEach { (date, sameDay) -> wholesale.replaceDay(date, garak, sameDay) }
+        rows.groupBy { it.trdClclnYmd }.forEach { (date, sameDay) -> wholesaleDailyWriteRepository.replaceDay(date, garak, sameDay) }
     }
 
     @Test
@@ -60,7 +60,7 @@ class LatestPriceRepositoryTest {
             row(id, LocalDate.of(2099, 12, 20), totPrc = 10_000, qty = "10"),
         )
 
-        val result = prices.findAll(end).single()
+        val result = latestPriceRepository.findAll(end).single()
 
         assertThat(result.date).isEqualTo(LocalDate.of(2099, 12, 20))
         assertThat(result.perKg).isEqualByComparingTo("1000")
@@ -76,7 +76,7 @@ class LatestPriceRepositoryTest {
             row(id, day, totPrc = 3_000, qty = "5", grdCd = "12", grdNm = "상"),
         )
 
-        val result = prices.findAll(end).single()
+        val result = latestPriceRepository.findAll(end).single()
 
         // 합산은 13,000 ÷ 15. 등급별 값의 평균(800)이 아니다
         assertThat(result.perKg).isEqualByComparingTo("866.67")
@@ -94,7 +94,7 @@ class LatestPriceRepositoryTest {
             row(b, LocalDate.of(2099, 12, 20), totPrc = 2_000, qty = "1"),
         )
 
-        assertThat(prices.findAll(end).map { it.varietyId to it.date }).containsExactly(
+        assertThat(latestPriceRepository.findAll(end).map { it.varietyId to it.date }).containsExactly(
             a to LocalDate.of(2099, 12, 30),
             b to LocalDate.of(2099, 12, 20),
         )
@@ -105,6 +105,6 @@ class LatestPriceRepositoryTest {
         val id = plantVariety("01")
         plant(row(id, LocalDate.of(2098, 12, 31), totPrc = 1_000, qty = "1"))
 
-        assertThat(prices.findAll(end)).isEmpty()
+        assertThat(latestPriceRepository.findAll(end)).isEmpty()
     }
 }

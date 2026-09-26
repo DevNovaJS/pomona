@@ -24,9 +24,9 @@ import java.time.LocalDate
 @Transactional
 class PriceControllerTest {
 
-    @Autowired private lateinit var mvc: MockMvc
-    @Autowired private lateinit var varieties: VarietyUpsertRepository
-    @Autowired private lateinit var wholesale: WholesaleDailyWriteRepository
+    @Autowired private lateinit var mockMvc: MockMvc
+    @Autowired private lateinit var varietyUpsertRepository: VarietyUpsertRepository
+    @Autowired private lateinit var wholesaleDailyWriteRepository: WholesaleDailyWriteRepository
 
     private val garak = "110001"
     private var varietyId = 0L
@@ -34,10 +34,10 @@ class PriceControllerTest {
     /** 2099-12-11 ~ 12-20 열흘 동안 매일 100kg, kg당 1,000원. 기준일은 12-20 */
     @BeforeEach
     fun plant() {
-        varietyId = varieties.upsert(VarietyUpsert("ZZ", "시험대분류", "01", "시험품목", "01", "시험품종"))
+        varietyId = varietyUpsertRepository.upsert(VarietyUpsert("ZZ", "시험대분류", "01", "시험품목", "01", "시험품종"))
         (11..20).forEach { day ->
             val date = LocalDate.of(2099, 12, day)
-            wholesale.replaceDay(date, garak, listOf(
+            wholesaleDailyWriteRepository.replaceDay(date, garak, listOf(
                 WholesaleDailyRow(
                     trdClclnYmd = date, whslMrktCd = garak, varietyId = varietyId,
                     trdSe = "경매", grdCd = "11", grdNm = "특", plorCd = "367000", plorNm = "충청북도 괴산군", unitNm = "kg",
@@ -50,7 +50,7 @@ class PriceControllerTest {
 
     @Test
     fun `기준일은 DB 의 마지막 거래일이고 12개월은 그 달을 포함해 거꾸로 센다`() {
-        mvc.get("/api/public/period").andExpect {
+        mockMvc.get("/api/public/period").andExpect {
             status { isOk() }
             jsonPath("$.baseDate") { value("2099-12-20") }
             jsonPath("$.from") { value("2099-01") }
@@ -60,7 +60,7 @@ class PriceControllerTest {
 
     @Test
     fun `마지막 거래일 가격을 등급별 목록과 함께 준다`() {
-        mvc.get("/api/public/prices/latest").andExpect {
+        mockMvc.get("/api/public/prices/latest").andExpect {
             status { isOk() }
             jsonPath("$[0].varietyId") { value(varietyId) }
             jsonPath("$[0].date") { value("2099-12-20") }
@@ -71,7 +71,7 @@ class PriceControllerTest {
 
     @Test
     fun `월별 물량은 달을 연-월 문자열로 원산지를 이름으로 준다`() {
-        mvc.get("/api/public/volumes").andExpect {
+        mockMvc.get("/api/public/volumes").andExpect {
             status { isOk() }
             jsonPath("$[0].month") { value("2099-12") }
             jsonPath("$[0].origin") { value("DOMESTIC") }
@@ -81,7 +81,7 @@ class PriceControllerTest {
 
     @Test
     fun `거래일 수는 연-월을 키로 준다`() {
-        mvc.get("/api/public/trading-days").andExpect {
+        mockMvc.get("/api/public/trading-days").andExpect {
             status { isOk() }
             jsonPath("$['2099-12']") { value(10) }
         }
@@ -89,7 +89,7 @@ class PriceControllerTest {
 
     @Test
     fun `주요 산지는 기간 합계와 연-월을 키로 한 달별 목록을 준다`() {
-        mvc.get("/api/public/origins").andExpect {
+        mockMvc.get("/api/public/origins").andExpect {
             status { isOk() }
             jsonPath("$[0].total[0].plorNm") { value("충청북도 괴산군") }
             jsonPath("$[0].byMonth['2099-12'][0].plorCd") { value("367000") }
@@ -99,7 +99,7 @@ class PriceControllerTest {
     @Test
     fun `나머지 공개 경로도 응답한다`() {
         listOf("/api/public/prices/weekly", "/api/public/volumes/items", "/api/public/origins/items").forEach { path ->
-            mvc.get(path).andExpect { status { isOk() } }
+            mockMvc.get(path).andExpect { status { isOk() } }
         }
     }
 }

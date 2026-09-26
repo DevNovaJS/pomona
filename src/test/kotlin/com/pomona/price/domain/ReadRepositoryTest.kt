@@ -21,16 +21,16 @@ import java.time.LocalDate
 @Import(VarietyUpsertRepository::class, WholesaleDailyWriteRepository::class)
 class ReadRepositoryTest {
 
-    @Autowired private lateinit var varietyUpsert: VarietyUpsertRepository
-    @Autowired private lateinit var wholesaleWriter: WholesaleDailyWriteRepository
-    @Autowired private lateinit var varieties: VarietyRepository
-    @Autowired private lateinit var wholesale: WholesaleDailyRepository
+    @Autowired private lateinit var varietyUpsertRepository: VarietyUpsertRepository
+    @Autowired private lateinit var wholesaleDailyWriteRepository: WholesaleDailyWriteRepository
+    @Autowired private lateinit var varietyRepository: VarietyRepository
+    @Autowired private lateinit var wholesaleDailyRepository: WholesaleDailyRepository
 
-    private fun plantVariety() = varietyUpsert.upsert(
+    private fun plantVariety() = varietyUpsertRepository.upsert(
         VarietyUpsert("ZZ", "시험대분류", "ZZ", "시험중분류", "01", "시험홍로"))
 
     private fun plantWholesale(varietyId: Long, date: LocalDate, qty: String) =
-        wholesaleWriter.replaceDay(date, "110001", listOf(WholesaleDailyRow(
+        wholesaleDailyWriteRepository.replaceDay(date, "110001", listOf(WholesaleDailyRow(
             trdClclnYmd = date, whslMrktCd = "110001", varietyId = varietyId,
             trdSe = "경매", grdCd = "11", grdNm = "특",
             plorCd = "367000", plorNm = "충청북도 괴산군", unitNm = "kg",
@@ -43,7 +43,7 @@ class ReadRepositoryTest {
     fun `자연키로 품종을 찾는다`() {
         plantVariety()
 
-        val found = varieties.findByLclsfCdAndMclsfCdAndSclsfCd("ZZ", "ZZ", "01")
+        val found = varietyRepository.findByLclsfCdAndMclsfCdAndSclsfCd("ZZ", "ZZ", "01")
 
         assertThat(found).isNotNull()
         assertThat(found!!.sclsfNm).isEqualTo("시험홍로")
@@ -54,7 +54,7 @@ class ReadRepositoryTest {
         val varietyId = plantVariety()
         plantWholesale(varietyId, LocalDate.of(2099, 1, 4), "13005.000")
 
-        val row = wholesale.findByTrdClclnYmd(LocalDate.of(2099, 1, 4)).first()
+        val row = wholesaleDailyRepository.findByTrdClclnYmd(LocalDate.of(2099, 1, 4)).first()
 
         // 62,058,000원 ÷ 13,005kg = 4,771.86원/kg (실제 2025-09-22 괴산군 홍로 특급 값)
         assertThat(row.representativePricePerKg).isEqualByComparingTo(BigDecimal("4771.86"))
@@ -66,7 +66,7 @@ class ReadRepositoryTest {
         val varietyId = plantVariety()
         listOf(3, 1, 2).forEach { plantWholesale(varietyId, LocalDate.of(2099, 1, it), "100.000") }
 
-        val rows = wholesale.findByVarietyIdAndTrdClclnYmdBetweenOrderByTrdClclnYmd(
+        val rows = wholesaleDailyRepository.findByVarietyIdAndTrdClclnYmdBetweenOrderByTrdClclnYmd(
             varietyId, LocalDate.of(2099, 1, 1), LocalDate.of(2099, 1, 31))
 
         assertThat(rows.map { it.trdClclnYmd.dayOfMonth }).containsExactly(1, 2, 3)
@@ -77,10 +77,10 @@ class ReadRepositoryTest {
         val varietyId = plantVariety()
         listOf(4, 20, 11).forEach { plantWholesale(varietyId, LocalDate.of(2099, 1, it), "100.000") }
 
-        val range = varieties.findTradedDateRange(varietyId)
+        val tradedDateRange = varietyRepository.findTradedDateRange(varietyId)
 
-        assertThat(range.firstTradedOn).isEqualTo(LocalDate.of(2099, 1, 4))
-        assertThat(range.lastTradedOn).isEqualTo(LocalDate.of(2099, 1, 20))
+        assertThat(tradedDateRange.firstTradedOn).isEqualTo(LocalDate.of(2099, 1, 4))
+        assertThat(tradedDateRange.lastTradedOn).isEqualTo(LocalDate.of(2099, 1, 20))
     }
 
     @Test
@@ -88,7 +88,7 @@ class ReadRepositoryTest {
         val varietyId = plantVariety()
         plantWholesale(varietyId, LocalDate.of(2099, 1, 4), "100.000")
 
-        val row = wholesale.findByTrdClclnYmd(LocalDate.of(2099, 1, 4)).first()
+        val row = wholesaleDailyRepository.findByTrdClclnYmd(LocalDate.of(2099, 1, 4)).first()
 
         assertThat(row.variety.sclsfNm).isEqualTo("시험홍로")
     }

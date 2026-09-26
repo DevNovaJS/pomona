@@ -11,7 +11,7 @@ import java.time.ZoneId
  * 하루 호출 수는 도매 15콜(5일 x 부류 2개, 페이지 수만큼) + 소매 21콜이다.
  */
 @Component
-class DailyCollectSchedule(private val range: RangeCollector) {
+class DailyCollectSchedule(private val rangeCollector: RangeCollector) {
 
     /**
      * D-1 ~ D-5 를 다시 수집한다. 하루치를 한 번만 받으면 안 되는 이유는 확정 지연이다.
@@ -23,7 +23,7 @@ class DailyCollectSchedule(private val range: RangeCollector) {
     @Scheduled(cron = "0 0 6 * * *", zone = SEOUL)
     fun runDaily() {
         val today = LocalDate.now(ZoneId.of(SEOUL))
-        range.collectAllIfIdle(today.minusDays(RECOLLECT_DAYS), today.minusDays(1))
+        rangeCollector.collectAllIfIdle(today.minusDays(RECOLLECT_DAYS), today.minusDays(1))
     }
 }
 

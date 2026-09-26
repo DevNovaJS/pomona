@@ -26,10 +26,10 @@ import java.time.LocalDate
 @Import(VarietyUpsertRepository::class, WholesaleDailyWriteRepository::class, RetailDailyWriteRepository::class)
 class WriteRepositoryTest {
 
-    @Autowired private lateinit var varieties: VarietyUpsertRepository
-    @Autowired private lateinit var wholesale: WholesaleDailyWriteRepository
-    @Autowired private lateinit var retail: RetailDailyWriteRepository
-    @Autowired private lateinit var jdbc: JdbcTemplate
+    @Autowired private lateinit var varietyUpsertRepository: VarietyUpsertRepository
+    @Autowired private lateinit var wholesaleDailyWriteRepository: WholesaleDailyWriteRepository
+    @Autowired private lateinit var retailDailyWriteRepository: RetailDailyWriteRepository
+    @Autowired private lateinit var jdbcTemplate: JdbcTemplate
 
     private val day = LocalDate.of(2099, 1, 4)
     private val garak = "110001"
@@ -69,40 +69,40 @@ class WriteRepositoryTest {
         )
 
     private fun wholesaleRows(on: LocalDate = day) =
-        jdbc.queryForList("select * from wholesale_daily where trd_clcln_ymd = ?", on)
+        jdbcTemplate.queryForList("select * from wholesale_daily where trd_clcln_ymd = ?", on)
 
     private fun retailRows(itemCd: String = "411") =
-        jdbc.queryForList("select * from retail_daily where exmn_ymd = ? and item_cd = ?", day, itemCd)
+        jdbcTemplate.queryForList("select * from retail_daily where exmn_ymd = ? and item_cd = ?", day, itemCd)
 
     // ── 품종: upsert 유지 ───────────────────────────────────────────
 
     @Test
     fun `품종을 두 번 넣어도 같은 id 가 돌아오고 행이 늘지 않는다`() {
-        val before = jdbc.queryForObject("select count(*) from variety_master", Int::class.java)!!
+        val before = jdbcTemplate.queryForObject("select count(*) from variety_master", Int::class.java)!!
 
-        val first = varieties.upsert(variety())
-        val second = varieties.upsert(variety(sclsfNm = "이름바뀜"))
+        val first = varietyUpsertRepository.upsert(variety())
+        val second = varietyUpsertRepository.upsert(variety(sclsfNm = "이름바뀜"))
 
         assertThat(second).isEqualTo(first)
-        assertThat(jdbc.queryForObject("select count(*) from variety_master", Int::class.java)).isEqualTo(before + 1)
-        assertThat(jdbc.queryForObject("select sclsf_nm from variety_master where id = ?", String::class.java, first))
+        assertThat(jdbcTemplate.queryForObject("select count(*) from variety_master", Int::class.java)).isEqualTo(before + 1)
+        assertThat(jdbcTemplate.queryForObject("select sclsf_nm from variety_master where id = ?", String::class.java, first))
             .isEqualTo("이름바뀜")
     }
 
     @Test
     fun `품종명이 null 이어도 id 를 돌려준다`() {
-        assertThat(varieties.upsert(variety(sclsfNm = null))).isNotNull()
+        assertThat(varietyUpsertRepository.upsert(variety(sclsfNm = null))).isNotNull()
     }
 
     // ── 도매: 날짜 단위로 지우고 다시 넣기 ─────────────────────────────
 
     @Test
     fun `같은 날짜를 다시 넣으면 새 값으로 바뀌고 행은 늘지 않는다`() {
-        val varietyId = varieties.upsert(variety())
-        wholesale.replaceDay(day, garak, listOf(wholesaleRow(varietyId, totPrc = 479_000, totQty = "410.000", count = 3)))
+        val varietyId = varietyUpsertRepository.upsert(variety())
+        wholesaleDailyWriteRepository.replaceDay(day, garak, listOf(wholesaleRow(varietyId, totPrc = 479_000, totQty = "410.000", count = 3)))
 
         // D-1 에 16% 가 아직 안 들어와 있다가 며칠 뒤 채워지는 상황
-        wholesale.replaceDay(day, garak, listOf(wholesaleRow(varietyId, totPrc = 913_000, totQty = "810.500", count = 7)))
+        wholesaleDailyWriteRepository.replaceDay(day, garak, listOf(wholesaleRow(varietyId, totPrc = 913_000, totQty = "810.500", count = 7)))
 
         val rows = wholesaleRows()
         assertThat(rows).hasSize(1)
@@ -115,22 +115,22 @@ class WriteRepositoryTest {
     fun `재수집 결과에서 사라진 키는 지워진다`() {
         // 등급이 '상'으로 잘못 올라왔다가 다음 날 '특'으로 정정된 경우.
         // upsert 였다면 '상' 행이 남아 그날 물량이 두 번 잡힌다.
-        val varietyId = varieties.upsert(variety())
-        wholesale.replaceDay(day, garak, listOf(wholesaleRow(varietyId, grdCd = "12")))
+        val varietyId = varietyUpsertRepository.upsert(variety())
+        wholesaleDailyWriteRepository.replaceDay(day, garak, listOf(wholesaleRow(varietyId, grdCd = "12")))
 
-        wholesale.replaceDay(day, garak, listOf(wholesaleRow(varietyId, grdCd = "11")))
+        wholesaleDailyWriteRepository.replaceDay(day, garak, listOf(wholesaleRow(varietyId, grdCd = "11")))
 
         assertThat(wholesaleRows().map { it["grd_cd"] }).containsExactly("11")
     }
 
     @Test
     fun `다른 날짜는 건드리지 않는다`() {
-        val varietyId = varieties.upsert(variety())
+        val varietyId = varietyUpsertRepository.upsert(variety())
         val nextDay = day.plusDays(1)
-        wholesale.replaceDay(day, garak, listOf(wholesaleRow(varietyId)))
-        wholesale.replaceDay(nextDay, garak, listOf(wholesaleRow(varietyId, date = nextDay)))
+        wholesaleDailyWriteRepository.replaceDay(day, garak, listOf(wholesaleRow(varietyId)))
+        wholesaleDailyWriteRepository.replaceDay(nextDay, garak, listOf(wholesaleRow(varietyId, date = nextDay)))
 
-        wholesale.replaceDay(nextDay, garak, listOf(wholesaleRow(varietyId, date = nextDay, totPrc = 1)))
+        wholesaleDailyWriteRepository.replaceDay(nextDay, garak, listOf(wholesaleRow(varietyId, date = nextDay, totPrc = 1)))
 
         assertThat(wholesaleRows(day)).hasSize(1)
         assertThat(wholesaleRows(day).first()["tot_prc"]).isEqualTo(479_000L)
@@ -138,20 +138,20 @@ class WriteRepositoryTest {
 
     @Test
     fun `여러 행을 한 번에 넣는다`() {
-        val varietyId = varieties.upsert(variety())
+        val varietyId = varietyUpsertRepository.upsert(variety())
         val rows = listOf("367000", "568000", "597000").map { wholesaleRow(varietyId).copy(plorCd = it) }
 
-        assertThat(wholesale.replaceDay(day, garak, rows)).isEqualTo(3)
+        assertThat(wholesaleDailyWriteRepository.replaceDay(day, garak, rows)).isEqualTo(3)
         assertThat(wholesaleRows()).hasSize(3)
     }
 
     @Test
     fun `빈 목록이면 그 날짜가 비워진다`() {
         // API 가 0행을 줬다는 건 그날 데이터가 없다는 뜻이다. 남아 있던 행도 치운다.
-        val varietyId = varieties.upsert(variety())
-        wholesale.replaceDay(day, garak, listOf(wholesaleRow(varietyId)))
+        val varietyId = varietyUpsertRepository.upsert(variety())
+        wholesaleDailyWriteRepository.replaceDay(day, garak, listOf(wholesaleRow(varietyId)))
 
-        assertThat(wholesale.replaceDay(day, garak, emptyList())).isZero()
+        assertThat(wholesaleDailyWriteRepository.replaceDay(day, garak, emptyList())).isZero()
         assertThat(wholesaleRows()).isEmpty()
     }
 
@@ -159,8 +159,8 @@ class WriteRepositoryTest {
 
     @Test
     fun `소매도 같은 범위를 다시 넣으면 새 값으로 바뀐다`() {
-        retail.replaceRange("01", "400", "411", day, day, listOf(retailRow(21_800)))
-        retail.replaceRange("01", "400", "411", day, day, listOf(retailRow(23_000)))
+        retailDailyWriteRepository.replaceRange("01", "400", "411", day, day, listOf(retailRow(21_800)))
+        retailDailyWriteRepository.replaceRange("01", "400", "411", day, day, listOf(retailRow(23_000)))
 
         assertThat(retailRows()).hasSize(1)
         assertThat(retailRows().first()["exmn_dd_prc"]).isEqualTo(23_000L)
@@ -168,19 +168,19 @@ class WriteRepositoryTest {
 
     @Test
     fun `소매 재수집에서 사라진 점포는 지워진다`() {
-        retail.replaceRange("01", "400", "411", day, day, listOf(retailRow(21_800, mrktCd = "9999991"), retailRow(22_000, mrktCd = "9999992")))
+        retailDailyWriteRepository.replaceRange("01", "400", "411", day, day, listOf(retailRow(21_800, mrktCd = "9999991"), retailRow(22_000, mrktCd = "9999992")))
 
-        retail.replaceRange("01", "400", "411", day, day, listOf(retailRow(21_800, mrktCd = "9999991")))
+        retailDailyWriteRepository.replaceRange("01", "400", "411", day, day, listOf(retailRow(21_800, mrktCd = "9999991")))
 
         assertThat(retailRows().map { it["mrkt_cd"] }).containsExactly("9999991")
     }
 
     @Test
     fun `소매는 다른 품목을 건드리지 않는다`() {
-        retail.replaceRange("01", "400", "411", day, day, listOf(retailRow(21_800, itemCd = "411")))
-        retail.replaceRange("01", "400", "412", day, day, listOf(retailRow(30_000, itemCd = "412")))
+        retailDailyWriteRepository.replaceRange("01", "400", "411", day, day, listOf(retailRow(21_800, itemCd = "411")))
+        retailDailyWriteRepository.replaceRange("01", "400", "412", day, day, listOf(retailRow(30_000, itemCd = "412")))
 
-        retail.replaceRange("01", "400", "412", day, day, emptyList())
+        retailDailyWriteRepository.replaceRange("01", "400", "412", day, day, emptyList())
 
         assertThat(retailRows("411")).hasSize(1)
         assertThat(retailRows("412")).isEmpty()

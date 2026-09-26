@@ -7,6 +7,7 @@ import com.pomona.datago.perday.model.PriceRequest
 import com.pomona.price.domain.RetailDailyWriteRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import tools.jackson.databind.json.JsonMapper
 import java.time.LocalDate
 
 /** 수집 대상 소매 품목. 부류 없이 품목코드만 주면 0행이 오므로 둘을 같이 들고 다닌다. */
@@ -20,18 +21,18 @@ data class RetailItem(val ctgryCd: String, val itemCd: String, val name: String)
 @Service
 class RetailCollector(
     private val perDayPriceClient: PerDayPriceClient,
-    private val retail: RetailDailyWriteRepository,
-    private val runs: BatchRunRepository,
+    private val retailDailyWriteRepository: RetailDailyWriteRepository,
+    private val batchRunRepository: BatchRunRepository,
 ) {
 
     /** [item] 의 [from]~[to] 조사값을 수집한다. 실패해도 예외를 던지지 않고 FAILED 로 기록해 돌려준다. */
     fun collect(item: RetailItem, from: LocalDate, to: LocalDate): BatchRun {
         val request = PriceRequest(from = from, to = to, categoryCode = item.ctgryCd, itemCode = item.itemCd)
-        val run = runs.save(BatchRun(jobName = JOB_NAME, targetDate = to, params = paramsOf(request)))
+        val run = batchRunRepository.save(BatchRun(jobName = RETAIL_JOB, targetDate = to, params = paramsOf(request)))
         try {
             val items = perDayPriceClient.fetchAll(request)
             // 지우는 범위를 요청 객체에서 그대로 꺼낸다. 받아온 범위와 지우는 범위가 어긋날 수 없다.
-            val rowCount = retail.replaceRange(
+            val rowCount = retailDailyWriteRepository.replaceRange(
                 request.seCd, request.categoryCode, request.itemCode, request.from, request.to,
                 items.map { it.toRow() },
             )
@@ -40,7 +41,17 @@ class RetailCollector(
             log.error("소매 수집 실패: {} {}~{}", item.name, from, to, e)
             run.fail(e.message ?: e::class.java.name)
         }
-        return runs.save(run)
+        return batchRunRepository.save(run)
+    }
+
+    /**
+     * 실행 기록 하나를 같은 품목·기간으로 다시 수집한다. 끝 날짜는 [BatchRun.targetDate] 이고
+     * 품목과 시작일은 [paramsOf] 가 남긴 params 에서 꺼낸다.
+     */
+    fun retry(run: BatchRun): BatchRun {
+        val params = jsonMapper.readTree(run.params)
+        val item = RETAIL_ITEMS.single { it.ctgryCd == params["category"].asString() && it.itemCd == params["item"].asString() }
+        return collect(item, LocalDate.parse(params["from"].asString()), run.targetDate)
     }
 
     private fun paramsOf(request: PriceRequest): String =
@@ -48,9 +59,12 @@ class RetailCollector(
             """"category":"${request.categoryCode}","item":"${request.itemCode}"}"""
 }
 
-private const val JOB_NAME = "retail-daily"
+/** 실행 기록의 작업 이름. 재실행이 이 값으로 어느 수집기로 보낼지 가른다. */
+const val RETAIL_JOB = "retail-daily"
 
 private val log = LoggerFactory.getLogger(RetailCollector::class.java)
+
+private val jsonMapper = JsonMapper.builder().build()
 
 /**
  * 수집 대상 21개 품목. 실호출로 확정한 목록이다.

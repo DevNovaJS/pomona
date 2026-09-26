@@ -8,11 +8,11 @@ import java.time.LocalDate
 
 /** 품목 목록. 품목 페이지는 품종 페이지와 달리 거래량 조건 없이 [end] 까지 최근 12개월에 거래가 있는 품목 전부를 만든다. */
 @Repository
-class ItemRepository(private val jdbc: JdbcTemplate) {
+class ItemRepository(private val jdbcTemplate: JdbcTemplate) {
 
     /** 기타 품목(중분류 `99`)은 뺀다. 품목 코드 순. */
     fun findAll(end: LocalDate): List<Item> =
-        jdbc.query(SQL, { rs, _ ->
+        jdbcTemplate.query(SQL, { rs, _ ->
             Item(
                 lclsfCd = rs.getString("lclsf_cd"), lclsfNm = rs.getString("lclsf_nm"),
                 mclsfCd = rs.getString("mclsf_cd"), mclsfNm = rs.getString("mclsf_nm"),

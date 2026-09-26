@@ -13,11 +13,11 @@ private const val PATH = "perDay/price"
 
 class PerDayPriceClient(
     private val restClient: RestClient,
-    private val uriFactory: DataGoUriFactory,
+    private val dataGoUriFactory: DataGoUriFactory,
 ) {
     fun fetchPage(request: PriceRequest): DataGoResponse<PriceItem> =
         restClient.get()
-            .uri(uriFactory.build(PATH, request.toParams()))
+            .uri(dataGoUriFactory.build(PATH, request.toParams()))
             .retrieve()
             .body(object : ParameterizedTypeReference<DataGoResponse<PriceItem>>() {})
             .orThrow("가격", request)

@@ -13,11 +13,11 @@ private const val PATH = "katSale/trades"
 
 class KatSaleClient(
     private val restClient: RestClient,
-    private val uriFactory: DataGoUriFactory,
+    private val dataGoUriFactory: DataGoUriFactory,
 ) {
     fun fetchPage(request: TradeRequest): DataGoResponse<TradeItem> =
         restClient.get()
-            .uri(uriFactory.build(PATH, request.toParams()))
+            .uri(dataGoUriFactory.build(PATH, request.toParams()))
             .retrieve()
             .body(object : ParameterizedTypeReference<DataGoResponse<TradeItem>>() {})
             .orThrow("정산정보", request)

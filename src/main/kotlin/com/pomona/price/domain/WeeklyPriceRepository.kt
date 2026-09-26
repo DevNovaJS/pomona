@@ -12,11 +12,11 @@ import java.time.LocalDate
  * 364일이라 요일이 맞는다. 달력 주(월~일)로 자르면 월요일에는 하루치로만 평균을 내게 되므로 7일 구간을 굴린다.
  */
 @Repository
-class WeeklyPriceRepository(private val jdbc: JdbcTemplate) {
+class WeeklyPriceRepository(private val jdbcTemplate: JdbcTemplate) {
 
     /** 이번 주에 거래가 있는 품종 전부. 메인과 품종 페이지가 같은 결과를 나눠 쓴다. */
     fun findAll(end: LocalDate): List<WeeklyPrice> =
-        jdbc.query(ALL, { rs, _ ->
+        jdbcTemplate.query(ALL, { rs, _ ->
             WeeklyPrice(
                 varietyId = rs.getLong("variety_id"),
                 thisWeekPerKg = rs.getBigDecimal("this_week"),

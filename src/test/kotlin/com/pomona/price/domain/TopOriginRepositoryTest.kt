@@ -22,9 +22,9 @@ import java.time.YearMonth
 @Import(VarietyUpsertRepository::class, WholesaleDailyWriteRepository::class, TopOriginRepository::class)
 class TopOriginRepositoryTest {
 
-    @Autowired private lateinit var varieties: VarietyUpsertRepository
-    @Autowired private lateinit var wholesale: WholesaleDailyWriteRepository
-    @Autowired private lateinit var origins: TopOriginRepository
+    @Autowired private lateinit var varietyUpsertRepository: VarietyUpsertRepository
+    @Autowired private lateinit var wholesaleDailyWriteRepository: WholesaleDailyWriteRepository
+    @Autowired private lateinit var topOriginRepository: TopOriginRepository
 
     private val garak = "110001"
     private val jan = YearMonth.of(2099, 1)
@@ -32,7 +32,7 @@ class TopOriginRepositoryTest {
     private val mar = YearMonth.of(2099, 3)
 
     private fun plantVariety(mclsfCd: String, sclsfCd: String) =
-        varieties.upsert(VarietyUpsert("ZZ", "시험대분류", mclsfCd, "시험중분류$mclsfCd", sclsfCd, "시험품종$sclsfCd"))
+        varietyUpsertRepository.upsert(VarietyUpsert("ZZ", "시험대분류", mclsfCd, "시험중분류$mclsfCd", sclsfCd, "시험품종$sclsfCd"))
 
     private fun row(varietyId: Long, date: LocalDate, plorCd: String, qty: String) = WholesaleDailyRow(
         trdClclnYmd = date, whslMrktCd = garak, varietyId = varietyId,
@@ -43,7 +43,7 @@ class TopOriginRepositoryTest {
 
     /** 날짜별로 묶어 그 날짜를 채운다. 쓰기 레포가 날짜 단위로 교체하므로 품종이 여럿이면 한 번에 넣어야 한다. */
     private fun plant(vararg rows: WholesaleDailyRow) {
-        rows.groupBy { it.trdClclnYmd }.forEach { (date, sameDay) -> wholesale.replaceDay(date, garak, sameDay) }
+        rows.groupBy { it.trdClclnYmd }.forEach { (date, sameDay) -> wholesaleDailyWriteRepository.replaceDay(date, garak, sameDay) }
     }
 
     private fun List<OriginVolume>.codesAndQty() = map { it.plorCd to it.qty.toInt() }
@@ -61,7 +61,7 @@ class TopOriginRepositoryTest {
             row(id, day, "100006", "40"),
         )
 
-        val result = origins.findAll(jan, jan).single()
+        val result = topOriginRepository.findAll(jan, jan).single()
 
         assertThat(result.total.codesAndQty()).containsExactly(
             "100002" to 60, "100004" to 50, "100006" to 40, "100003" to 30, "100005" to 20,
@@ -80,7 +80,7 @@ class TopOriginRepositoryTest {
             row(id, LocalDate.of(2099, 2, 3), "100002", "70"),
         )
 
-        val result = origins.findAll(jan, mar).single()
+        val result = topOriginRepository.findAll(jan, mar).single()
 
         assertThat(result.total.codesAndQty()).containsExactly("100002" to 80, "100001" to 55)
         assertThat(result.byMonth.getValue(jan).codesAndQty()).containsExactly("100001" to 50, "100002" to 10)
@@ -96,7 +96,7 @@ class TopOriginRepositoryTest {
         val day = LocalDate.of(2099, 1, 5)
         plant(row(a, day, "100001", "10"), row(b, day, "100002", "20"))
 
-        val result = origins.findAll(jan, jan)
+        val result = topOriginRepository.findAll(jan, jan)
 
         assertThat(result.map { it.varietyId to it.total.single().plorCd })
             .containsExactly(a to "100001", b to "100002")
@@ -115,7 +115,7 @@ class TopOriginRepositoryTest {
             row(pear, day, "100003", "5"),
         )
 
-        val result = origins.findItems(jan, jan)
+        val result = topOriginRepository.findItems(jan, jan)
 
         assertThat(result.map { it.mclsfCd }).containsExactly("01", "02")
         assertThat(result.first().total.codesAndQty()).containsExactly("100002" to 40, "100001" to 30)
@@ -126,6 +126,6 @@ class TopOriginRepositoryTest {
         val otherItem = plantVariety("99", "98")
         plant(row(otherItem, LocalDate.of(2099, 1, 5), "800CL", "10"))
 
-        assertThat(origins.findItems(jan, jan)).isEmpty()
+        assertThat(topOriginRepository.findItems(jan, jan)).isEmpty()
     }
 }

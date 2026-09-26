@@ -15,17 +15,17 @@ import java.time.YearMonth
  * 월별 물량처럼 품종·품목 하나씩이 아니라 [from]~[to] 달 전부를 한 번에 준다.
  */
 @Repository
-class TopOriginRepository(private val jdbc: JdbcTemplate) {
+class TopOriginRepository(private val jdbcTemplate: JdbcTemplate) {
 
     /** 품종 전부. 품종 id 순. */
     fun findAll(from: YearMonth, to: YearMonth): List<TopOrigins> =
-        jdbc.query(BY_VARIETY, { rs, _ -> rs.getLong("variety_id") to rs.toRankedOrigin() }, from.firstDay(), to.nextFirstDay())
+        jdbcTemplate.query(BY_VARIETY, { rs, _ -> rs.getLong("variety_id") to rs.toRankedOrigin() }, from.firstDay(), to.nextFirstDay())
             .groupBy({ it.first }, { it.second })
             .map { (varietyId, origins) -> TopOrigins(varietyId, origins.total(), origins.byMonth()) }
 
     /** 품목 전부. 품목 코드 순. 기타 품목(중분류 `99`)은 뺀다. */
     fun findItems(from: YearMonth, to: YearMonth): List<ItemTopOrigins> =
-        jdbc.query(BY_ITEM, { rs, _ -> (rs.getString("lclsf_cd") to rs.getString("mclsf_cd")) to rs.toRankedOrigin() },
+        jdbcTemplate.query(BY_ITEM, { rs, _ -> (rs.getString("lclsf_cd") to rs.getString("mclsf_cd")) to rs.toRankedOrigin() },
             from.firstDay(), to.nextFirstDay())
             .groupBy({ it.first }, { it.second })
             .map { (item, origins) -> ItemTopOrigins(item.first, item.second, origins.total(), origins.byMonth()) }

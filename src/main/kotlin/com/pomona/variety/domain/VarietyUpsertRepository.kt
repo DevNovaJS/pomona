@@ -13,10 +13,10 @@ import org.springframework.stereotype.Repository
  * 한 번에 돌려준다. MySQL 에는 없는 기능이고, 이 프로젝트가 PostgreSQL 인 이유 중 하나다.
  */
 @Repository
-class VarietyUpsertRepository(private val jdbc: JdbcTemplate) {
+class VarietyUpsertRepository(private val jdbcTemplate: JdbcTemplate) {
 
     /** 넣거나 갱신하고 **어느 쪽이든 id 를 돌려준다.** */
-    fun upsert(variety: VarietyUpsert): Long = jdbc.queryForObject(
+    fun upsert(variety: VarietyUpsert): Long = jdbcTemplate.queryForObject(
         SQL, Long::class.java,
         variety.lclsfCd, variety.lclsfNm,
         variety.mclsfCd, variety.mclsfNm,

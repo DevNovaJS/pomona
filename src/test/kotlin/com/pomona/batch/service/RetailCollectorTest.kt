@@ -29,17 +29,17 @@ import java.time.LocalDate
 @Import(RetailDailyWriteRepository::class)
 class RetailCollectorTest {
 
-    @Autowired private lateinit var retail: RetailDailyWriteRepository
-    @Autowired private lateinit var runs: BatchRunRepository
-    @Autowired private lateinit var jdbc: JdbcTemplate
+    @Autowired private lateinit var retailDailyWriteRepository: RetailDailyWriteRepository
+    @Autowired private lateinit var batchRunRepository: BatchRunRepository
+    @Autowired private lateinit var jdbcTemplate: JdbcTemplate
 
     private val builder = RestClient.builder()
     private val server = MockRestServiceServer.bindTo(builder).build()
-    private val client = PerDayPriceClient(
+    private val perDayPriceClient = PerDayPriceClient(
         builder.build(),
         DataGoUriFactory(baseUrl = "https://apis.data.go.kr/B552845", serviceKey = "TEST%2BKEY%3D"),
     )
-    private val collector by lazy { RetailCollector(client, retail, runs) }
+    private val retailCollector by lazy { RetailCollector(perDayPriceClient, retailDailyWriteRepository, batchRunRepository) }
 
     private val apple = RetailItem(ctgryCd = "400", itemCd = "411", name = "사과")
     private val pear = RetailItem(ctgryCd = "400", itemCd = "412", name = "배")
@@ -56,13 +56,13 @@ class RetailCollectorTest {
             .andRespond(withSuccess(fixture(name), MediaType.APPLICATION_JSON))
     }
 
-    private fun retailRowCount(itemCd: String) = jdbc.queryForObject(
+    private fun retailRowCount(itemCd: String) = jdbcTemplate.queryForObject(
         "select count(*) from retail_daily where item_cd = ? and exmn_ymd between ? and ?",
         Int::class.java, itemCd, from, day,
     )
 
     private fun plantExistingRow(item: RetailItem) {
-        retail.replaceRange(
+        retailDailyWriteRepository.replaceRange(
             "01", item.ctgryCd, item.itemCd, from, day,
             listOf(
                 RetailDailyRow(
@@ -80,7 +80,7 @@ class RetailCollectorTest {
     fun `정상 응답이면 그대로 저장하고 SUCCESS 로 기록한다`() {
         respondWith("perday-price-2rows.json")
 
-        val run = collector.collect(apple, from, day)
+        val run = retailCollector.collect(apple, from, day)
 
         server.verify()
         assertThat(run.status).isEqualTo(BatchStatus.SUCCESS)
@@ -94,7 +94,7 @@ class RetailCollectorTest {
         plantExistingRow(apple)
         respondWith("perday-price-empty.json")
 
-        val run = collector.collect(apple, from, day)
+        val run = retailCollector.collect(apple, from, day)
 
         assertThat(run.status).isEqualTo(BatchStatus.EMPTY)
         assertThat(retailRowCount("411")).isZero()
@@ -105,7 +105,7 @@ class RetailCollectorTest {
         plantExistingRow(apple)
         respondWith("perday-price-error.json")
 
-        val run = collector.collect(apple, from, day)
+        val run = retailCollector.collect(apple, from, day)
 
         assertThat(run.status).isEqualTo(BatchStatus.FAILED)
         assertThat(run.message).contains("SERVICE_KEY_IS_NOT_REGISTERED_ERROR")
@@ -117,7 +117,7 @@ class RetailCollectorTest {
         plantExistingRow(pear)
         respondWith("perday-price-empty.json")
 
-        collector.collect(apple, from, day)
+        retailCollector.collect(apple, from, day)
 
         assertThat(retailRowCount("412")).isEqualTo(1)
     }
@@ -126,9 +126,9 @@ class RetailCollectorTest {
     fun `실행 기록에 품목과 기간이 남는다`() {
         respondWith("perday-price-2rows.json")
 
-        val run = collector.collect(apple, from, day)
+        val run = retailCollector.collect(apple, from, day)
 
-        val saved = runs.findById(run.id!!).get()
+        val saved = batchRunRepository.findById(run.id!!).get()
         assertThat(saved.jobName).isEqualTo("retail-daily")
         assertThat(saved.targetDate).isEqualTo(day)          // 기간의 마지막 날
         assertThat(saved.params).contains("2026-09-03").contains("2026-09-07")

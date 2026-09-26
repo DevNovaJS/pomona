@@ -20,9 +20,9 @@ import java.time.LocalDate
 @Transactional
 class VarietyControllerTest {
 
-    @Autowired private lateinit var mvc: MockMvc
-    @Autowired private lateinit var varieties: VarietyUpsertRepository
-    @Autowired private lateinit var wholesale: WholesaleDailyWriteRepository
+    @Autowired private lateinit var mockMvc: MockMvc
+    @Autowired private lateinit var varietyUpsertRepository: VarietyUpsertRepository
+    @Autowired private lateinit var wholesaleDailyWriteRepository: WholesaleDailyWriteRepository
 
     private val garak = "110001"
 
@@ -35,21 +35,21 @@ class VarietyControllerTest {
 
     @Test
     fun `품목은 거래가 조금만 있어도 나오고 품종은 페이지 조건을 채운 것만 나온다`() {
-        val paged = varieties.upsert(VarietyUpsert("ZZ", "시험대분류", "01", "시험사과", "01", "시험홍로"))
-        val small = varieties.upsert(VarietyUpsert("ZZ", "시험대분류", "02", "시험배", "01", "시험신고"))
+        val paged = varietyUpsertRepository.upsert(VarietyUpsert("ZZ", "시험대분류", "01", "시험사과", "01", "시험홍로"))
+        val small = varietyUpsertRepository.upsert(VarietyUpsert("ZZ", "시험대분류", "02", "시험배", "01", "시험신고"))
         (11..20).forEach { day ->
             val date = LocalDate.of(2099, 12, day)
             val rows = listOf(row(paged, date, "100")) + if (day == 20) listOf(row(small, date, "1")) else emptyList()
-            wholesale.replaceDay(date, garak, rows)
+            wholesaleDailyWriteRepository.replaceDay(date, garak, rows)
         }
 
-        mvc.get("/api/public/items").andExpect {
+        mockMvc.get("/api/public/items").andExpect {
             status { isOk() }
             jsonPath("$.length()") { value(2) }
             jsonPath("$[0].mclsfNm") { value("시험사과") }
             jsonPath("$[1].mclsfNm") { value("시험배") }
         }
-        mvc.get("/api/public/varieties").andExpect {
+        mockMvc.get("/api/public/varieties").andExpect {
             status { isOk() }
             jsonPath("$.length()") { value(1) }
             jsonPath("$[0].id") { value(paged) }

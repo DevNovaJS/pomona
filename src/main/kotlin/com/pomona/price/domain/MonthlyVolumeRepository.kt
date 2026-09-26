@@ -18,14 +18,14 @@ import java.time.YearMonth
  * 하나씩 부르면 빌드 한 번에 품종 279번 · 품목 수십 번이 된다.
  */
 @Repository
-class MonthlyVolumeRepository(private val jdbc: JdbcTemplate) {
+class MonthlyVolumeRepository(private val jdbcTemplate: JdbcTemplate) {
 
     /**
      * 품종 전부의 월별 물량을 달·원산지별로. 달 순, 달 안에서는 물량이 많은 순.
      * 품종 페이지 막대는 품종으로 묶어 쓰고, 제철 캘린더는 이 순서 그대로 달로 묶어 쓴다.
      */
     fun findAll(from: YearMonth, to: YearMonth): List<MonthlyVolume> =
-        jdbc.query(BY_VARIETY, { rs, _ ->
+        jdbcTemplate.query(BY_VARIETY, { rs, _ ->
             MonthlyVolume(
                 varietyId = rs.getLong("variety_id"),
                 month = rs.getMonth(),
@@ -36,7 +36,7 @@ class MonthlyVolumeRepository(private val jdbc: JdbcTemplate) {
 
     /** 품목 전부의 월별 물량을 달·원산지별로. 품목 코드 순, 달 순. 기타 품목(중분류 `99`)은 뺀다. */
     fun findItems(from: YearMonth, to: YearMonth): List<ItemMonthlyVolume> =
-        jdbc.query(BY_ITEM, { rs, _ ->
+        jdbcTemplate.query(BY_ITEM, { rs, _ ->
             ItemMonthlyVolume(
                 lclsfCd = rs.getString("lclsf_cd"),
                 mclsfCd = rs.getString("mclsf_cd"),
@@ -52,7 +52,7 @@ class MonthlyVolumeRepository(private val jdbc: JdbcTemplate) {
      * 거래가 하나도 없는 달은 들어가지 않는다.
      */
     fun countTradingDays(from: YearMonth, to: YearMonth): Map<YearMonth, Int> =
-        jdbc.query(TRADING_DAYS, { rs, _ -> rs.getMonth() to rs.getInt("days") }, from.firstDay(), to.nextFirstDay())
+        jdbcTemplate.query(TRADING_DAYS, { rs, _ -> rs.getMonth() to rs.getInt("days") }, from.firstDay(), to.nextFirstDay())
             .toMap()
 }
 

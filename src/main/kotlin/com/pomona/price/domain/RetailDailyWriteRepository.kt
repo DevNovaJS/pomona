@@ -14,7 +14,7 @@ import java.time.LocalDate
  * 재수집에서 사라진 점포 행도 함께 정리된다. 21만 행에서 품목 1개 × 5일(627행) 지우기 0.3ms.
  */
 @Repository
-class RetailDailyWriteRepository(private val jdbc: JdbcTemplate) {
+class RetailDailyWriteRepository(private val jdbcTemplate: JdbcTemplate) {
 
     /**
      * [seCd]·[ctgryCd]·[itemCd] 의 [from]~[to] 행을 전부 지우고 [rows] 로 채운다.
@@ -26,7 +26,7 @@ class RetailDailyWriteRepository(private val jdbc: JdbcTemplate) {
         from: LocalDate, to: LocalDate,
         rows: Collection<RetailDailyRow>,
     ): Int {
-        jdbc.update(DELETE, seCd, ctgryCd, itemCd, from, to)
+        jdbcTemplate.update(DELETE, seCd, ctgryCd, itemCd, from, to)
         if (rows.isEmpty()) {
             return 0
         }
@@ -39,7 +39,7 @@ class RetailDailyWriteRepository(private val jdbc: JdbcTemplate) {
                 it.exmnDdPrc, it.exmnDdCnvsPrc, it.orgnlRegDt,
             )
         }
-        return jdbc.batchUpdate(INSERT, args, TYPES).sum()
+        return jdbcTemplate.batchUpdate(INSERT, args, TYPES).sum()
     }
 }
 
