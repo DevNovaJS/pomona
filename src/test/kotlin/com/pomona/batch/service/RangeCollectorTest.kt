@@ -1,11 +1,13 @@
 package com.pomona.batch.service
 
+import com.pomona.batch.CollectAlreadyRunningException
 import com.pomona.batch.domain.BatchRun
 import com.pomona.batch.domain.BatchRunRepository
 import com.pomona.datago.katsale.KatSaleClient
 import com.pomona.datago.perday.PerDayPriceClient
 import com.pomona.price.domain.RetailDailyWriteRepository
 import com.pomona.price.domain.WholesaleDailyWriteRepository
+import com.pomona.variety.domain.RetailVarietyUpsertRepository
 import com.pomona.variety.domain.VarietyUpsertRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -38,7 +40,7 @@ class RangeCollectorTest {
 
     private class FakeRetailCollector : RetailCollector(
         mock(PerDayPriceClient::class.java), mock(RetailDailyWriteRepository::class.java),
-        mock(BatchRunRepository::class.java),
+        mock(BatchRunRepository::class.java), mock(RetailVarietyUpsertRepository::class.java),
     ) {
         val collectedRequests = mutableListOf<Triple<RetailItem, LocalDate, LocalDate>>()
         override fun collect(item: RetailItem, from: LocalDate, to: LocalDate): BatchRun {

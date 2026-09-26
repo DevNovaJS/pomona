@@ -1,6 +1,7 @@
 package com.pomona.datago.perday.model
 
 import com.pomona.price.model.RetailDailyRow
+import com.pomona.variety.model.RetailVarietyUpsert
 import tools.jackson.databind.PropertyNamingStrategies
 import tools.jackson.databind.annotation.JsonNaming
 import java.time.LocalDate
@@ -52,7 +53,18 @@ data class PriceItem(
         orgnlRegDt = orgnlRegDt?.let { OffsetDateTime.parse(it) },
     )
 
+    /** 이 행이 가리키는 소매 품종. */
+    fun toRetailVariety(): RetailVarietyUpsert = RetailVarietyUpsert(
+        ctgryCd = need(ctgryCd, "ctgry_cd"), ctgryNm = need(ctgryNm, "ctgry_nm"),
+        itemCd = need(itemCd, "item_cd"), itemNm = need(itemNm, "item_nm"),
+        vrtyCd = need(vrtyCd, "vrty_cd"), vrtyNm = need(vrtyNm, "vrty_nm"),
+    )
+
     /** 필수값이 비어 있으면 예외. 실측에선 없었고, 생기면 그 실행을 FAILED 로 남긴다. */
     private fun need(value: String?, field: String): String =
         value ?: error("가격정보 $field 값이 비었다: $this")
 }
+
+/** 응답에 나온 소매 품종을 부류·품목·품종 코드 기준으로 한 번씩만 뽑는다. */
+fun List<PriceItem>.toRetailVarieties(): List<RetailVarietyUpsert> =
+    map { it.toRetailVariety() }.distinctBy { Triple(it.ctgryCd, it.itemCd, it.vrtyCd) }

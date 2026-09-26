@@ -1,13 +1,11 @@
 package com.pomona.batch.service
 
+import com.pomona.batch.CollectAlreadyRunningException
 import com.pomona.batch.domain.BatchRun
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.LocalDate
 import java.util.concurrent.atomic.AtomicBoolean
-
-/** 이미 수집이 돌고 있는데 또 시작하려 할 때. */
-class CollectAlreadyRunningException : IllegalStateException("이미 수집이 돌고 있다")
 
 /**
  * 기간을 받아 수집한다. 매일 도는 스케줄도, 백필도, 백오피스 재실행·기간 재수집도 전부 이리로 들어온다.

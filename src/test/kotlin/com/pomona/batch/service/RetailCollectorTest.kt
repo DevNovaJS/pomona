@@ -6,6 +6,7 @@ import com.pomona.datago.DataGoUriFactory
 import com.pomona.datago.perday.PerDayPriceClient
 import com.pomona.price.domain.RetailDailyWriteRepository
 import com.pomona.price.model.RetailDailyRow
+import com.pomona.variety.domain.RetailVarietyUpsertRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers.containsString
 import org.junit.jupiter.api.Test
@@ -26,20 +27,21 @@ import java.time.LocalDate
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Import(RetailDailyWriteRepository::class)
+@Import(RetailDailyWriteRepository::class, RetailVarietyUpsertRepository::class)
 class RetailCollectorTest {
 
     @Autowired private lateinit var retailDailyWriteRepository: RetailDailyWriteRepository
     @Autowired private lateinit var batchRunRepository: BatchRunRepository
+    @Autowired private lateinit var retailVarietyUpsertRepository: RetailVarietyUpsertRepository
     @Autowired private lateinit var jdbcTemplate: JdbcTemplate
 
-    private val builder = RestClient.builder()
-    private val server = MockRestServiceServer.bindTo(builder).build()
+    private val restClientBuilder = RestClient.builder()
+    private val mockRestServiceServer = MockRestServiceServer.bindTo(restClientBuilder).build()
     private val perDayPriceClient = PerDayPriceClient(
-        builder.build(),
+        restClientBuilder.build(),
         DataGoUriFactory(baseUrl = "https://apis.data.go.kr/B552845", serviceKey = "TEST%2BKEY%3D"),
     )
-    private val retailCollector by lazy { RetailCollector(perDayPriceClient, retailDailyWriteRepository, batchRunRepository) }
+    private val retailCollector by lazy { RetailCollector(perDayPriceClient, retailDailyWriteRepository, batchRunRepository, retailVarietyUpsertRepository) }
 
     private val apple = RetailItem(ctgryCd = "400", itemCd = "411", name = "사과")
     private val pear = RetailItem(ctgryCd = "400", itemCd = "412", name = "배")
@@ -52,7 +54,7 @@ class RetailCollectorTest {
         checkNotNull(javaClass.getResource("/datago/$name")) { "픽스처 없음: $name" }.readText()
 
     private fun respondWith(name: String) {
-        server.expect(requestTo(containsString("cond%5Bitem_cd%3A%3AEQ%5D=411")))
+        mockRestServiceServer.expect(requestTo(containsString("cond%5Bitem_cd%3A%3AEQ%5D=411")))
             .andRespond(withSuccess(fixture(name), MediaType.APPLICATION_JSON))
     }
 
@@ -82,7 +84,7 @@ class RetailCollectorTest {
 
         val run = retailCollector.collect(apple, from, day)
 
-        server.verify()
+        mockRestServiceServer.verify()
         assertThat(run.status).isEqualTo(BatchStatus.SUCCESS)
         assertThat(run.rowCount).isEqualTo(2)        // 소매는 접지 않으므로 응답 행 수 그대로
         assertThat(retailRowCount("411")).isEqualTo(2)
@@ -132,6 +134,18 @@ class RetailCollectorTest {
         assertThat(saved.jobName).isEqualTo("retail-daily")
         assertThat(saved.targetDate).isEqualTo(day)          // 기간의 마지막 날
         assertThat(saved.params).contains("2026-09-03").contains("2026-09-07")
+    }
+
+    @Test
+    fun `응답에 나온 소매 품종을 소매 품종 마스터에 올린다`() {
+        // 로컬 DB 에 실데이터로 채운 사과 품종이 있으므로 지우고 시작한다. 테스트가 끝나면 롤백된다.
+        jdbcTemplate.update("delete from retail_variety where item_cd = '411'")
+        respondWith("perday-price-2rows.json")
+
+        retailCollector.collect(apple, from, day)
+
+        val names = jdbcTemplate.queryForList("select vrty_nm from retail_variety where item_cd = '411'", String::class.java)
+        assertThat(names).contains("쓰가루(아오리)")
     }
 
     @Test

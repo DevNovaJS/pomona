@@ -225,3 +225,52 @@ comment on column review.origin     is '포장에 적힌 산지. 안 적혀 있�
 comment on column review.price      is '산 가격(원)';
 comment on column review.weight_gram is '산 무게(g). 바나나 한 송이처럼 모르면 NULL. 있으면 kg당 가격을 계산해 도매가와 나란히 보여준다';
 comment on column review.rating     is '별점 0~5';
+
+
+-- ---------------------------------------------------------------------------
+-- retail_variety : 소매 품종 마스터
+-- 출처 [가격] perDay/price. 소매 수집 때 응답에 나온 품종을 upsert 한다 (정산 쪽 variety_master 와 같은 방식).
+-- retail_daily 한 행은 "어느 날 어느 점포의 어느 등급 가격" 이라 품종을 가리킬 수 없고,
+-- 재수집 때 지우고 다시 넣어 id 가 바뀌므로 FK 대상이 될 수 없다. 그래서 품종만 따로 둔다.
+-- retail_daily 에 이 테이블의 id 를 넣지 않는다. 조회 때 코드 3개로 조인한다.
+-- ---------------------------------------------------------------------------
+create table if not exists retail_variety (
+    id         bigserial   primary key,
+    ctgry_cd   varchar(3)  not null,
+    ctgry_nm   varchar(20) not null,
+    item_cd    varchar(3)  not null,
+    item_nm    varchar(20) not null,
+    vrty_cd    varchar(2)  not null,
+    vrty_nm    varchar(30) not null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+
+    constraint uq_retail_variety unique (ctgry_cd, item_cd, vrty_cd)
+);
+
+comment on table  retail_variety          is '소매 품종 마스터. [가격] 조사에 등장한 품종';
+comment on column retail_variety.ctgry_cd is '부류. 400 과일류 / 200 채소류';
+comment on column retail_variety.item_cd  is '품목. 411 = 사과';
+comment on column retail_variety.vrty_cd  is '품종. 사과의 07 = 홍로. 00 은 품종 구분 없음';
+
+
+-- ---------------------------------------------------------------------------
+-- variety_retail_mapping : 정산 품종 ↔ 소매 품종
+-- API 출처 없음. 백오피스에서 손으로 짝짓는다. 연결하면 그 품종 페이지에 소매가가 붙는다.
+-- 정산 여러 품종이 소매 하나를 가리킬 수 있다 (후지·로얄후지·로얄부사 → 소매 후지).
+-- 정산 품종 하나에는 매핑이 하나뿐이다 (uq_mapping_variety).
+-- 소매 품종이 NULL 인 행 = "확인했는데 소매에 없음". 품종 대부분은 소매 짝이 없어서, 행이 아예 없는
+-- 품종만 "미연결(아직 안 본 것)" 로 띄워야 새 품종이 묻히지 않는다.
+-- ---------------------------------------------------------------------------
+create table if not exists variety_retail_mapping (
+    id                bigserial   primary key,
+    variety_id        bigint      not null references variety_master (id),
+    retail_variety_id bigint      references retail_variety (id),
+    created_at        timestamptz not null default now(),
+    updated_at        timestamptz not null default now(),
+
+    constraint uq_mapping_variety unique (variety_id)
+);
+
+comment on table  variety_retail_mapping                   is '정산 품종 ↔ 소매 품종. 백오피스에서 짝짓는다';
+comment on column variety_retail_mapping.retail_variety_id is '짝지은 소매 품종. NULL 이면 확인했는데 소매에 없음';

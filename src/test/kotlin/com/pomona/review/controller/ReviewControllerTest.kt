@@ -13,6 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.get
@@ -29,6 +30,7 @@ import java.time.LocalDate
  * 도매 행은 2099년에만 넣는다. 쓰기 레포가 날짜 단위로 지우고 넣으므로 실데이터 날짜를 쓰면 그날 실데이터가 지워진다.
  */
 @SpringBootTest
+@ActiveProfiles("test")
 @AutoConfigureMockMvc
 class ReviewControllerTest {
 

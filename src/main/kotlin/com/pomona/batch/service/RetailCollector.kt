@@ -4,7 +4,9 @@ import com.pomona.batch.domain.BatchRun
 import com.pomona.batch.domain.BatchRunRepository
 import com.pomona.datago.perday.PerDayPriceClient
 import com.pomona.datago.perday.model.PriceRequest
+import com.pomona.datago.perday.model.toRetailVarieties
 import com.pomona.price.domain.RetailDailyWriteRepository
+import com.pomona.variety.domain.RetailVarietyUpsertRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import tools.jackson.databind.json.JsonMapper
@@ -23,6 +25,7 @@ class RetailCollector(
     private val perDayPriceClient: PerDayPriceClient,
     private val retailDailyWriteRepository: RetailDailyWriteRepository,
     private val batchRunRepository: BatchRunRepository,
+    private val retailVarietyUpsertRepository: RetailVarietyUpsertRepository,
 ) {
 
     /** [item] 의 [from]~[to] 조사값을 수집한다. 실패해도 예외를 던지지 않고 FAILED 로 기록해 돌려준다. */
@@ -31,6 +34,8 @@ class RetailCollector(
         val run = batchRunRepository.save(BatchRun(jobName = RETAIL_JOB, targetDate = to, params = paramsOf(request)))
         try {
             val items = perDayPriceClient.fetchAll(request)
+            // 응답에 나온 소매 품종을 마스터에 올린다. 품종 매핑이 이 목록에서 고른다.
+            retailVarietyUpsertRepository.upsertAll(items.toRetailVarieties())
             // 지우는 범위를 요청 객체에서 그대로 꺼낸다. 받아온 범위와 지우는 범위가 어긋날 수 없다.
             val rowCount = retailDailyWriteRepository.replaceRange(
                 request.seCd, request.categoryCode, request.itemCode, request.from, request.to,

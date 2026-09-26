@@ -40,10 +40,10 @@ class WholesaleCollectorTest {
     @Autowired private lateinit var batchRunRepository: BatchRunRepository
     @Autowired private lateinit var jdbcTemplate: JdbcTemplate
 
-    private val builder = RestClient.builder()
-    private val server = MockRestServiceServer.bindTo(builder).build()
+    private val restClientBuilder = RestClient.builder()
+    private val mockRestServiceServer = MockRestServiceServer.bindTo(restClientBuilder).build()
     private val katSaleClient = KatSaleClient(
-        builder.build(),
+        restClientBuilder.build(),
         DataGoUriFactory(baseUrl = "https://apis.data.go.kr/B552845", serviceKey = "TEST%2BKEY%3D"),
     )
     private val wholesaleCollector by lazy { WholesaleCollector(katSaleClient, varietyUpsertRepository, wholesaleDailyWriteRepository, batchRunRepository) }
@@ -56,9 +56,9 @@ class WholesaleCollectorTest {
 
     /** 과실류(06)·과일과채류(08) 호출에 각각 돌려줄 응답 */
     private fun respondWith(fruit: String, fruitVegetable: String) {
-        server.expect(requestTo(containsString("cond%5Bgds_lclsf_cd%3A%3AEQ%5D=06")))
+        mockRestServiceServer.expect(requestTo(containsString("cond%5Bgds_lclsf_cd%3A%3AEQ%5D=06")))
             .andRespond(withSuccess(fixture(fruit), MediaType.APPLICATION_JSON))
-        server.expect(requestTo(containsString("cond%5Bgds_lclsf_cd%3A%3AEQ%5D=08")))
+        mockRestServiceServer.expect(requestTo(containsString("cond%5Bgds_lclsf_cd%3A%3AEQ%5D=08")))
             .andRespond(withSuccess(fixture(fruitVegetable), MediaType.APPLICATION_JSON))
     }
 
@@ -87,7 +87,7 @@ class WholesaleCollectorTest {
 
         val run = wholesaleCollector.collect(day)
 
-        server.verify()
+        mockRestServiceServer.verify()
         assertThat(run.status).isEqualTo(BatchStatus.SUCCESS)
         assertThat(run.rowCount).isEqualTo(2)                 // 홍로 특급, 산지 2곳
         assertThat(wholesaleRowCount()).isEqualTo(2)
@@ -109,7 +109,7 @@ class WholesaleCollectorTest {
     @Test
     fun `API 가 오류를 주면 기존 행을 건드리지 않고 FAILED 와 사유를 기록한다`() {
         plantExistingRow()
-        server.expect(requestTo(containsString("cond%5Bgds_lclsf_cd%3A%3AEQ%5D=06")))
+        mockRestServiceServer.expect(requestTo(containsString("cond%5Bgds_lclsf_cd%3A%3AEQ%5D=06")))
             .andRespond(withSuccess(fixture("katsale-trades-error.json"), MediaType.APPLICATION_JSON))
 
         val run = wholesaleCollector.collect(day)

@@ -1,6 +1,8 @@
 package com.pomona.review.service
 
 import com.pomona.price.model.MarketPrice
+import com.pomona.review.ReviewNotFoundException
+import com.pomona.review.UnknownVarietyException
 import com.pomona.review.domain.Review
 import com.pomona.review.domain.ReviewMarketPriceRepository
 import com.pomona.review.domain.ReviewRepository
@@ -13,12 +15,6 @@ import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
-
-/** 찾는 리뷰가 없을 때. */
-class ReviewNotFoundException(id: Long) : NoSuchElementException("리뷰가 없다: $id")
-
-/** 요청에 적힌 품종이 없을 때. 요청 본문이 잘못된 것이라 404 가 아니라 400 이다. */
-class UnknownVarietyException(varietyId: Long) : IllegalArgumentException("없는 품종이다: $varietyId")
 
 /** 리뷰 작성·수정·삭제와 조회. 응답마다 그날 도매 시세를 붙인다. */
 @Service

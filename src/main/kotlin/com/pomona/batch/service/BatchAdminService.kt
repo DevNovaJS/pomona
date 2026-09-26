@@ -1,5 +1,6 @@
 package com.pomona.batch.service
 
+import com.pomona.batch.BatchRunNotFoundException
 import com.pomona.batch.domain.BatchRunRepository
 import com.pomona.batch.model.BatchOverviewResponse
 import com.pomona.batch.model.BatchRunResponse
@@ -8,9 +9,6 @@ import com.pomona.batch.model.toResponse
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.time.LocalDate
-
-/** 재실행하려는 실행 기록이 없을 때. */
-class BatchRunNotFoundException(id: Long) : NoSuchElementException("실행 기록이 없다: $id")
 
 /** 백오피스 배치 관리. 수집 현황·이력을 모아 보여주고, 재실행과 기간 재수집을 [RangeCollector] 로 넘긴다. */
 @Service
