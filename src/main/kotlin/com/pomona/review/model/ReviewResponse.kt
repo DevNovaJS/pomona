@@ -1,5 +1,6 @@
 package com.pomona.review.model
 
+import com.pomona.price.model.MarketPrice
 import com.pomona.review.domain.Review
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -21,13 +22,15 @@ data class ReviewResponse(
     val pricePerKg: BigDecimal?,
     val rating: Int,
     val body: String,
+    /** 먹은 날 당일 또는 그 전 마지막 거래일의 도매 시세. 먹은 날 포함 7일 안에 거래가 없으면 null */
+    val marketPrice: MarketPrice?,
     val createdAt: OffsetDateTime,
     val updatedAt: OffsetDateTime,
 )
 
-fun Review.toResponse() = ReviewResponse(
+fun Review.toResponse(marketPrice: MarketPrice?) = ReviewResponse(
     id = id!!, varietyId = variety.id!!, itemName = variety.mclsfNm, varietyName = variety.sclsfNm,
     eatenDate = eatenDate, title = title, store = store, origin = origin,
     price = price, weightGram = weightGram, pricePerKg = pricePerKg, rating = rating, body = body,
-    createdAt = createdAt, updatedAt = updatedAt,
+    marketPrice = marketPrice, createdAt = createdAt, updatedAt = updatedAt,
 )

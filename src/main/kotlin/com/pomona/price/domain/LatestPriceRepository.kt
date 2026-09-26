@@ -1,11 +1,8 @@
 package com.pomona.price.domain
 
-import com.pomona.price.model.GradePrice
 import com.pomona.price.model.LatestPrice
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
-import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.LocalDate
 
 /**
@@ -19,38 +16,13 @@ class LatestPriceRepository(private val jdbcTemplate: JdbcTemplate) {
 
     /** 12개월 안에 거래가 있는 품종 전부. 품종 id 순. */
     fun findAll(end: LocalDate): List<LatestPrice> =
-        jdbcTemplate.query(SQL, { rs, _ ->
-            GradeTotal(
-                varietyId = rs.getLong("variety_id"),
-                date = rs.getObject("trd_clcln_ymd", LocalDate::class.java),
-                grdCd = rs.getString("grd_cd"),
-                grdNm = rs.getString("grd_nm"),
-                totPrc = rs.getBigDecimal("tot_prc"),
-                totQty = rs.getBigDecimal("tot_qty"),
-            )
-        }, end.minusYears(1), end)
-            .groupBy { it.varietyId }
+        jdbcTemplate.query(SQL, { rs, _ -> rs.getLong("variety_id") to rs.toGradeTotal() }, end.minusYears(1), end)
+            .groupBy({ it.first }, { it.second })
             .map { (varietyId, grades) ->
-                LatestPrice(
-                    varietyId = varietyId,
-                    date = grades.first().date,
-                    perKg = perKg(grades.sumOf { it.totPrc }, grades.sumOf { it.totQty }),
-                    grades = grades.map { GradePrice(it.grdCd, it.grdNm, perKg(it.totPrc, it.totQty)) },
-                )
+                val marketPrice = grades.toMarketPrice()
+                LatestPrice(varietyId, marketPrice.date, marketPrice.perKg, marketPrice.grades)
             }
 }
-
-/** 쿼리 한 행: 품종 하나의 마지막 거래일에 한 등급의 총액·물량 합. 합산 대표가는 이 합들을 다시 더해 구한다. */
-private class GradeTotal(
-    val varietyId: Long,
-    val date: LocalDate,
-    val grdCd: String,
-    val grdNm: String,
-    val totPrc: BigDecimal,
-    val totQty: BigDecimal,
-)
-
-private fun perKg(totPrc: BigDecimal, totQty: BigDecimal): BigDecimal = totPrc.divide(totQty, 2, RoundingMode.HALF_UP)
 
 /**
  * `last` 에서 품종별 마지막 거래일을 찾고, 그날 행만 다시 읽어 등급별로 합친다.
