@@ -1,8 +1,16 @@
 package com.pomona.price.controller
 
+import com.pomona.price.domain.RetailDailyWriteRepository
 import com.pomona.price.domain.WholesaleDailyWriteRepository
+import com.pomona.price.model.RetailDailyRow
 import com.pomona.price.model.WholesaleDailyRow
+import com.pomona.variety.domain.RetailVarietyRepository
+import com.pomona.variety.domain.RetailVarietyUpsertRepository
+import com.pomona.variety.domain.VarietyRepository
+import com.pomona.variety.domain.VarietyRetailMapping
+import com.pomona.variety.domain.VarietyRetailMappingRepository
 import com.pomona.variety.domain.VarietyUpsertRepository
+import com.pomona.variety.model.RetailVarietyUpsert
 import com.pomona.variety.model.VarietyUpsert
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -29,6 +37,11 @@ class PriceControllerTest {
     @Autowired private lateinit var mockMvc: MockMvc
     @Autowired private lateinit var varietyUpsertRepository: VarietyUpsertRepository
     @Autowired private lateinit var wholesaleDailyWriteRepository: WholesaleDailyWriteRepository
+    @Autowired private lateinit var retailDailyWriteRepository: RetailDailyWriteRepository
+    @Autowired private lateinit var retailVarietyUpsertRepository: RetailVarietyUpsertRepository
+    @Autowired private lateinit var retailVarietyRepository: RetailVarietyRepository
+    @Autowired private lateinit var varietyRepository: VarietyRepository
+    @Autowired private lateinit var varietyRetailMappingRepository: VarietyRetailMappingRepository
 
     private val garak = "110001"
     private var varietyId = 0L
@@ -95,6 +108,32 @@ class PriceControllerTest {
             status { isOk() }
             jsonPath("$[0].total[0].plorNm") { value("충청북도 괴산군") }
             jsonPath("$[0].byMonth['2099-12'][0].plorCd") { value("367000") }
+        }
+    }
+
+    @Test
+    fun `소매가는 기준 단위와 등급별 가격 점포 수를 준다`() {
+        retailVarietyUpsertRepository.upsertAll(listOf(RetailVarietyUpsert("999", "시험부류", "901", "시험품목", "01", "시험소매품종")))
+        val retailVariety = retailVarietyRepository.findAll().single { it.ctgryCd == "999" }
+        varietyRetailMappingRepository.save(VarietyRetailMapping(varietyRepository.getReferenceById(varietyId), retailVariety))
+        val day = LocalDate.of(2099, 12, 20)
+        retailDailyWriteRepository.replaceRange("01", "999", "901", day, day, listOf(
+            RetailDailyRow(
+                exmnYmd = day, seCd = "01", seNm = "소매", ctgryCd = "999", ctgryNm = "시험부류",
+                itemCd = "901", itemNm = "시험품목", vrtyCd = "01", vrtyNm = "시험소매품종", grdCd = "04", grdNm = "상품",
+                sggCd = "9999", sggNm = "시험시", mrktCd = "0000001", mrktNm = "시험점포",
+                unit = "개", unitSz = "10", exmnDdPrc = 22_600, exmnDdCnvsPrc = 22_600, orgnlRegDt = null,
+            ),
+        ))
+
+        mockMvc.get("/api/public/retail-prices").andExpect {
+            status { isOk() }
+            jsonPath("$[?(@.varietyId == $varietyId)].retailVarietyName") { value("시험소매품종") }
+            jsonPath("$[?(@.varietyId == $varietyId)].unit") { value("개") }
+            jsonPath("$[?(@.varietyId == $varietyId)].unitSize") { value(10) }
+            jsonPath("$[?(@.varietyId == $varietyId)].to") { value("2099-12-20") }
+            jsonPath("$[?(@.varietyId == $varietyId)].grades[0].price") { value(22600) }
+            jsonPath("$[?(@.varietyId == $varietyId)].grades[0].storeCount") { value(1) }
         }
     }
 

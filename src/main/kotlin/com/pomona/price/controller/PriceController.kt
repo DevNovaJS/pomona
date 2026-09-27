@@ -5,6 +5,7 @@ import com.pomona.price.model.ItemMonthlyVolume
 import com.pomona.price.model.ItemTopOrigins
 import com.pomona.price.model.LatestPrice
 import com.pomona.price.model.MonthlyVolume
+import com.pomona.price.model.RetailPrice
 import com.pomona.price.model.TopOrigins
 import com.pomona.price.model.WeeklyPrice
 import com.pomona.price.service.PublicPriceService
@@ -30,6 +31,9 @@ class PriceController(private val publicPriceService: PublicPriceService) {
 
     @GetMapping("/prices/weekly")
     fun weeklyPrices(): List<WeeklyPrice> = publicPriceService.weeklyPrices()
+
+    @GetMapping("/retail-prices")
+    fun retailPrices(): List<RetailPrice> = publicPriceService.retailPrices()
 
     @GetMapping("/volumes")
     fun volumes(): List<MonthlyVolume> = publicPriceService.volumes()
