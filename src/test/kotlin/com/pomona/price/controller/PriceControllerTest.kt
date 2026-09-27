@@ -95,6 +95,17 @@ class PriceControllerTest {
     }
 
     @Test
+    fun `최근 14일 물량은 평소 물량과 배수를 같이 준다`() {
+        mockMvc.get("/api/public/volumes/recent").andExpect {
+            status { isOk() }
+            jsonPath("$[0].varietyId") { value(varietyId) }
+            jsonPath("$[0].recentQty") { value(1000.000) }
+            jsonPath("$[0].usualQty") { value(38.356) }  // 1,000 × 14 ÷ 365
+            jsonPath("$[0].ratio") { value(26.1) }
+        }
+    }
+
+    @Test
     fun `거래일 수는 연-월을 키로 준다`() {
         mockMvc.get("/api/public/trading-days").andExpect {
             status { isOk() }

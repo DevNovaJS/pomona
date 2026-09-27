@@ -2,6 +2,7 @@ package com.pomona.price.service
 
 import com.pomona.price.domain.LatestPriceRepository
 import com.pomona.price.domain.MonthlyVolumeRepository
+import com.pomona.price.domain.RecentVolumeRepository
 import com.pomona.price.domain.RetailPriceRepository
 import com.pomona.price.domain.TopOriginRepository
 import com.pomona.price.domain.WeeklyPriceRepository
@@ -10,6 +11,7 @@ import com.pomona.price.model.ItemMonthlyVolume
 import com.pomona.price.model.ItemTopOrigins
 import com.pomona.price.model.LatestPrice
 import com.pomona.price.model.MonthlyVolume
+import com.pomona.price.model.RecentVolume
 import com.pomona.price.model.RetailPrice
 import com.pomona.price.model.TopOrigins
 import com.pomona.price.model.WeeklyPrice
@@ -23,6 +25,7 @@ class PublicPriceService(
     private val latestPriceRepository: LatestPriceRepository,
     private val weeklyPriceRepository: WeeklyPriceRepository,
     private val monthlyVolumeRepository: MonthlyVolumeRepository,
+    private val recentVolumeRepository: RecentVolumeRepository,
     private val topOriginRepository: TopOriginRepository,
     private val retailPriceRepository: RetailPriceRepository,
 ) {
@@ -34,6 +37,9 @@ class PublicPriceService(
     fun weeklyPrices(): List<WeeklyPrice> = weeklyPriceRepository.findAll(buildPeriodService.current().baseDate)
 
     fun volumes(): List<MonthlyVolume> = buildPeriodService.current().let { monthlyVolumeRepository.findAll(it.from, it.to) }
+
+    /** 제철 판단용 최근 14일·평소 14일 물량. */
+    fun recentVolumes(): List<RecentVolume> = recentVolumeRepository.findAll(buildPeriodService.current().baseDate)
 
     fun itemVolumes(): List<ItemMonthlyVolume> = buildPeriodService.current().let { monthlyVolumeRepository.findItems(it.from, it.to) }
 
