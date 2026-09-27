@@ -11,7 +11,7 @@ class ReviewTest {
     private val banana = VarietyMaster("06", "과실류", "16", "바나나", "01", "바나나")
 
     private fun review(price: Int, weightGram: Int?) = Review(
-        variety = banana, eatenDate = LocalDate.of(2026, 9, 20), title = "바나나", store = "동네 마트",
+        fruitName = "바나나", variety = banana, eatenDate = LocalDate.of(2026, 9, 20), title = "바나나", store = "동네 마트",
         origin = null, price = price, weightGram = weightGram, rating = 4, body = "달다",
     )
 
@@ -33,7 +33,7 @@ class ReviewTest {
         val before = review.updatedAt
 
         review.update(
-            variety = banana, eatenDate = LocalDate.of(2026, 9, 21), title = "다시 먹은 바나나", store = "시장",
+            fruitName = "바나나", variety = banana, eatenDate = LocalDate.of(2026, 9, 21), title = "다시 먹은 바나나", store = "시장",
             origin = "필리핀", price = 3_000, weightGram = 1_000, rating = 5, body = "더 달다",
         )
 

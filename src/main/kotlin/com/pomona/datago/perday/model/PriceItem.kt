@@ -11,8 +11,8 @@ import java.time.format.DateTimeFormatter
 /**
  * 일별 도·소매 가격정보(perDay/price) 응답의 item 한 건.
  *
- * `exmnDdCnvsPrc`(kg환산가)는 `unit` 이 kg 일 때만 실제로 환산된 값이다.
- * '개' 단위 품목은 조사가를 그대로 복사해 온다.
+ * `exmnDdCnvsPrc`(kg환산가)는 `unit` 이 무게 단위(g, kg)일 때 kg당으로 환산된 값이다(100g ×10, 500g ×2, 2kg ×0.5).
+ * '개' 단위 품목은 조사가를 그대로 복사해 온다. 2026-03~09 저장분 전부와 2024-05 무작위 한 주를 대조해 예외가 없었다.
  */
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy::class)
 data class PriceItem(

@@ -27,7 +27,18 @@ class BatchAdminService(
         )
     }
 
-    fun recentRuns(): List<BatchRunResponse> = batchRunRepository.findTop50ByOrderByIdDesc().map { it.toResponse() }
+    /**
+     * 최근 실행 이력을 10건씩. [before] 가 없으면 가장 최근 10건, 있으면 그 id 보다 먼저 시작한 10건.
+     * 화면은 받은 마지막 id 를 다음 [before] 로 넘기고, 10건보다 적게 오면 끝이다.
+     */
+    fun recentRuns(before: Long?): List<BatchRunResponse> {
+        val runs = if (before == null) {
+            batchRunRepository.findTop10ByOrderByIdDesc()
+        } else {
+            batchRunRepository.findTop10ByIdLessThanOrderByIdDesc(before)
+        }
+        return runs.map { it.toResponse() }
+    }
 
     fun failures(): List<BatchRunResponse> = batchRunRepository.findUnresolvedFailures().map { it.toResponse() }
 

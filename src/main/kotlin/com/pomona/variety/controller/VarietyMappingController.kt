@@ -1,7 +1,6 @@
 package com.pomona.variety.controller
 
 import com.pomona.variety.model.RetailVarietyResponse
-import com.pomona.variety.model.UnmappedVarietyResponse
 import com.pomona.variety.model.VarietyMappingRequest
 import com.pomona.variety.model.VarietyMappingResponse
 import com.pomona.variety.service.VarietyMappingService
@@ -23,13 +22,10 @@ class VarietyMappingController(private val varietyMappingService: VarietyMapping
     @GetMapping
     fun mappings(): List<VarietyMappingResponse> = varietyMappingService.mappings()
 
-    @GetMapping("/unmapped")
-    fun unmapped(): List<UnmappedVarietyResponse> = varietyMappingService.unmapped()
-
     @GetMapping("/retail-varieties")
     fun retailVarieties(): List<RetailVarietyResponse> = varietyMappingService.retailVarieties()
 
-    /** 짝을 짓거나 바꾼다. 본문의 retailVarietyId 가 null 이면 "소매에 없음". */
+    /** 짝을 짓거나 바꾼다. */
     @PutMapping("/{varietyId}")
     fun map(@PathVariable varietyId: Long, @RequestBody request: VarietyMappingRequest): VarietyMappingResponse =
         varietyMappingService.map(varietyId, request.retailVarietyId)

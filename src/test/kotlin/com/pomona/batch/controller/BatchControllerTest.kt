@@ -68,6 +68,17 @@ class BatchControllerTest {
     }
 
     @Test
+    fun `before 를 주면 그보다 먼저 시작한 것만 준다`() {
+        val older = failedRun()
+        val newer = failedRun()
+
+        mockMvc.get("/api/admin/batch/runs?before=${newer.id}").andExpect {
+            status { isOk() }
+            jsonPath("$[0].id") { value(older.id!!) }
+        }
+    }
+
+    @Test
     fun `없는 실행을 재실행하면 404 와 사유를 준다`() {
         mockMvc.post("/api/admin/batch/runs/-1/retry").andExpect {
             status { isNotFound() }

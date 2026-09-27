@@ -110,15 +110,16 @@ class ReviewMarketPriceRepositoryTest {
     fun `리뷰 전부의 시세를 리뷰 id 로 모아 주고 시세가 없는 리뷰는 빠진다`() {
         plant(row(10, totPrc = 2_000, qty = "1"))
         val variety = varietyRepository.getReferenceById(varietyId)
-        fun review(eaten: LocalDate) = reviewRepository.save(
-            Review(variety, eaten, "제목", "마트", null, 1_000, null, 3, "본문"),
+        fun review(eaten: LocalDate, linked: Boolean = true) = reviewRepository.save(
+            Review("시험과일", variety.takeIf { linked }, eaten, "제목", "마트", null, 1_000, null, 3, "본문"),
         )
         val withPrice = review(eatenDate)
         val tooLate = review(LocalDate.of(2099, 1, 30))
+        val unlinked = review(eatenDate, linked = false)
 
         val marketPrices = reviewMarketPriceRepository.findForReviews()
 
         assertThat(marketPrices[withPrice.id]?.date).isEqualTo(eatenDate)
-        assertThat(marketPrices).doesNotContainKey(tooLate.id)
+        assertThat(marketPrices).doesNotContainKeys(tooLate.id, unlinked.id)
     }
 }

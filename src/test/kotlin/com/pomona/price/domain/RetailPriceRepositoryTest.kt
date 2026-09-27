@@ -140,16 +140,14 @@ class RetailPriceRepositoryTest {
     }
 
     @Test
-    fun `소매에 없음으로 매핑했거나 매핑이 없는 품종은 빠진다`() {
+    fun `매핑이 없는 품종은 빠진다`() {
         val mapped = mappedVariety("907")
-        val noRetail = varietyUpsertRepository.upsert(VarietyUpsert("ZZ", "시험대분류", "01", "시험품목", "71", "소매없음"))
-        varietyRetailMappingRepository.save(VarietyRetailMapping(varietyRepository.getReferenceById(noRetail), null))
         val unmapped = varietyUpsertRepository.upsert(VarietyUpsert("ZZ", "시험대분류", "01", "시험품목", "72", "미매핑"))
         plant(row("907", day = 10, mrktCd = "0000001", prc = 10_000))
 
         val varietyIds = retailPriceRepository.findAll().map { it.varietyId }
 
-        assertThat(varietyIds).contains(mapped).doesNotContain(noRetail, unmapped)
+        assertThat(varietyIds).contains(mapped).doesNotContain(unmapped)
     }
 
     @Test

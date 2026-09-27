@@ -16,7 +16,7 @@ import java.time.LocalDate
 @Repository
 class ReviewMarketPriceRepository(private val jdbcTemplate: JdbcTemplate) {
 
-    /** 리뷰 전부의 시세를 한 번에. 리뷰 id → 시세. 시세가 없는 리뷰는 들어가지 않는다. */
+    /** 리뷰 전부의 시세를 한 번에. 리뷰 id → 시세. 시세가 없는 리뷰는 들어가지 않는다 — 품종을 연결하지 않은 리뷰는 조인에서 빠진다. */
     fun findForReviews(): Map<Long, MarketPrice> =
         jdbcTemplate.query(FOR_REVIEWS, { rs, _ -> rs.getLong("review_id") to rs.toGradeTotal() })
             .groupBy({ it.first }, { it.second })

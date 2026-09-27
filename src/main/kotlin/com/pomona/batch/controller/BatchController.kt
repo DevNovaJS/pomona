@@ -22,8 +22,9 @@ class BatchController(private val batchAdminService: BatchAdminService) {
     @GetMapping("/status")
     fun status(): BatchOverviewResponse = batchAdminService.overview()
 
+    /** 10건씩. 다음 장은 받은 마지막 id 를 before 로 넘긴다. */
     @GetMapping("/runs")
-    fun recentRuns(): List<BatchRunResponse> = batchAdminService.recentRuns()
+    fun recentRuns(@RequestParam before: Long?): List<BatchRunResponse> = batchAdminService.recentRuns(before)
 
     @GetMapping("/failures")
     fun failures(): List<BatchRunResponse> = batchAdminService.failures()

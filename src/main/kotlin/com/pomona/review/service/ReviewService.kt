@@ -39,7 +39,7 @@ class ReviewService(
     @Transactional
     fun create(request: ReviewRequest): ReviewResponse {
         val review = Review(
-            variety = findVariety(request.varietyId),
+            fruitName = request.fruitName, variety = request.varietyId?.let { findVariety(it) },
             eatenDate = request.eatenDate, title = request.title, store = request.store, origin = request.origin,
             price = request.price, weightGram = request.weightGram, rating = request.rating, body = request.body,
         )
@@ -52,7 +52,7 @@ class ReviewService(
     fun update(id: Long, request: ReviewRequest): ReviewResponse {
         val review = findReview(id)
         review.update(
-            variety = findVariety(request.varietyId),
+            fruitName = request.fruitName, variety = request.varietyId?.let { findVariety(it) },
             eatenDate = request.eatenDate, title = request.title, store = request.store, origin = request.origin,
             price = request.price, weightGram = request.weightGram, rating = request.rating, body = request.body,
         )
@@ -64,8 +64,9 @@ class ReviewService(
         reviewRepository.delete(findReview(id))
     }
 
+    /** 품종을 연결하지 않은 리뷰는 시세가 없다. */
     private fun marketPriceOf(review: Review): MarketPrice? =
-        reviewMarketPriceRepository.find(review.variety.id!!, review.eatenDate)
+        review.variety?.let { reviewMarketPriceRepository.find(it.id!!, review.eatenDate) }
 
     private fun findReview(id: Long): Review = reviewRepository.findByIdOrNull(id) ?: throw ReviewNotFoundException(id)
 

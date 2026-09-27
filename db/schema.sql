@@ -107,7 +107,7 @@ create index if not exists ix_wholesale_variety_date on wholesale_daily (variety
 -- ---------------------------------------------------------------------------
 -- retail_daily : 소매 조사 원본
 -- 출처 [가격] perDay/price. 접지 않고 점포 단위 그대로 넣는다.
--- 용도는 과일 물가 지수. 리뷰의 비교 대상으로도 검토 중.
+-- 용도는 품종 페이지 소매가 (품종 매핑으로 소매 품종이 연결된 품종에 붙는다).
 -- ---------------------------------------------------------------------------
 create table if not exists retail_daily (
     id               bigserial   primary key,
@@ -152,10 +152,10 @@ comment on column retail_daily.mrkt_cd          is '조사한 점포. 50곳. 지
 comment on column retail_daily.unit             is '판매 단위. 실측 3종 — 개 / kg / g. 체리는 100g 단위로 조사된다';
 comment on column retail_daily.unit_sz          is '묶음 크기. unit 과 합쳐 해석한다 — 개 + 10 = 10개 묶음';
 comment on column retail_daily.exmn_dd_prc      is '그 점포의 그날 가격(원). 위 묶음 하나 값';
-comment on column retail_daily.exmn_dd_cnvs_prc is 'kg 환산가. unit 이 kg 일 때만 실제로 환산된다. 개 단위는 원가를 복사해 온다';
+comment on column retail_daily.exmn_dd_cnvs_prc is 'kg 환산가. 무게 단위(g, kg)면 kg당으로 환산된다(100g ×10, 500g ×2, 2kg ×0.5). 개 단위는 조사가를 그대로 복사해 온다';
 comment on column retail_daily.orgnl_reg_dt     is '원본 시스템 등록일시. 소매에도 확정 지연이 있는지 나중에 여기서 본다';
 
--- 물가 지수·품종 페이지의 시계열
+-- 품목·품종별 시계열
 create index if not exists ix_retail_item_date on retail_daily (item_cd, vrty_cd, exmn_ymd);
 
 
@@ -196,10 +196,13 @@ create index if not exists ix_batch_run_job_date on batch_run (job_name, target_
 -- API 출처 없음. 백오피스에서 쓰고, 공개면 빌드가 전부 가져가 목록·상세 페이지를 만든다.
 -- 임시저장이 없다 — 저장하면 다음 빌드에 공개된다.
 -- 리뷰는 많아야 수백 건이라 품종별로 찾아도 테이블 전체를 읽는 게 빠르므로 인덱스를 걸지 않는다.
+-- 과일 이름은 적은 그대로 fruit_name 에 둔다. 가락시장 품종 연결(variety_id)은 선택이다 — 가락시장에서 거래되지 않는
+-- 과일(여행 중 먹은 두리안)이나 품종을 모르는 과일(편의점 낱개 사과)도 쓸 수 있어야 한다.
 -- ---------------------------------------------------------------------------
 create table if not exists review (
     id          bigserial    primary key,
-    variety_id  bigint       not null references variety_master (id),
+    fruit_name  varchar(100) not null,
+    variety_id  bigint       references variety_master (id),
     eaten_date  date         not null,
     title       varchar(100) not null,
     store       varchar(100) not null,
@@ -217,7 +220,8 @@ create table if not exists review (
 );
 
 comment on table  review            is '직접 먹은 과일 리뷰';
-comment on column review.variety_id is '품종. 상세에 붙는 그날 도매 시세를 이 품종으로 찾는다';
+comment on column review.fruit_name is '과일 이름. 포장에 적힌 그대로. 공개면 이름표와 검색에 쓴다';
+comment on column review.variety_id is '연결한 가락시장 품종. 그날 도매 시세와 품종 페이지 링크를 이 품종으로 찾는다. 연결 안 하면 NULL';
 comment on column review.eaten_date is '먹은 날. 도매 시세는 이날 또는 그 전 마지막 거래일 값을 붙인다';
 comment on column review.title      is '목록과 검색 결과에 나오는 제목';
 comment on column review.store      is '산 곳';
@@ -259,13 +263,12 @@ comment on column retail_variety.vrty_cd  is '품종. 사과의 07 = 홍로. 00 
 -- API 출처 없음. 백오피스에서 손으로 짝짓는다. 연결하면 그 품종 페이지에 소매가가 붙는다.
 -- 정산 여러 품종이 소매 하나를 가리킬 수 있다 (후지·로얄후지·로얄부사 → 소매 후지).
 -- 정산 품종 하나에는 매핑이 하나뿐이다 (uq_mapping_variety).
--- 소매 품종이 NULL 인 행 = "확인했는데 소매에 없음". 품종 대부분은 소매 짝이 없어서, 행이 아예 없는
--- 품종만 "미연결(아직 안 본 것)" 로 띄워야 새 품종이 묻히지 않는다.
+-- 행이 없으면 소매 짝이 없는 것이다. 품종 대부분이 그렇다.
 -- ---------------------------------------------------------------------------
 create table if not exists variety_retail_mapping (
     id                bigserial   primary key,
     variety_id        bigint      not null references variety_master (id),
-    retail_variety_id bigint      references retail_variety (id),
+    retail_variety_id bigint      not null references retail_variety (id),
     created_at        timestamptz not null default now(),
     updated_at        timestamptz not null default now(),
 
@@ -273,4 +276,4 @@ create table if not exists variety_retail_mapping (
 );
 
 comment on table  variety_retail_mapping                   is '정산 품종 ↔ 소매 품종. 백오피스에서 짝짓는다';
-comment on column variety_retail_mapping.retail_variety_id is '짝지은 소매 품종. NULL 이면 확인했는데 소매에 없음';
+comment on column variety_retail_mapping.retail_variety_id is '짝지은 소매 품종';

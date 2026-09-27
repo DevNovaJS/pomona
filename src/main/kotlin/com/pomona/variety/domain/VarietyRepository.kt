@@ -17,6 +17,9 @@ interface VarietyRepository : JpaRepository<VarietyMaster, Long> {
 
     fun findAllByLclsfCdOrderByMclsfCdAscSclsfCdAsc(lclsfCd: String): List<VarietyMaster>
 
+    /** 전부, 대·중·소분류 코드 순. 백오피스 품종 목록. */
+    fun findAllByOrderByLclsfCdAscMclsfCdAscSclsfCdAsc(): List<VarietyMaster>
+
     /**
      * 이 품종이 거래에 처음·마지막으로 등장한 날. 컬럼으로 들고 있지 않고 여기서 뽑는다 —
      * `ix_wholesale_variety_date` 인덱스의 양 끝만 읽으므로 테이블을 훑지 않는다.

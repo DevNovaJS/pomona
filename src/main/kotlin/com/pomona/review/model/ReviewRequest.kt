@@ -7,7 +7,9 @@ import java.time.LocalDate
  * DB 체크 제약이 막고 [com.pomona.common.GlobalExceptionHandler] 가 400 으로 돌려준다.
  */
 data class ReviewRequest(
-    val varietyId: Long,
+    val fruitName: String,
+    /** 가락시장 품종을 연결하지 않으면 빼고 보낸다 */
+    val varietyId: Long? = null,
     val eatenDate: LocalDate,
     val title: String,
     val store: String,

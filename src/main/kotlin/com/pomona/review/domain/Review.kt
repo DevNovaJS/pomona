@@ -20,7 +20,10 @@ import java.time.OffsetDateTime
 /**
  * 직접 먹은 과일 리뷰.
  *
- * 품종부터 본문까지 전부 고칠 수 있으므로 저장 필드는 전부 본문 `var` + `protected set` 이고 [update] 로만 바꾼다.
+ * 과일 이름([fruitName])은 적은 그대로 두고, 가락시장 품종([variety])은 연결할 때만 붙인다. 가락시장에서 거래되지 않는
+ * 과일이나 품종을 모르는 과일도 쓸 수 있어야 해서다. 품종이 없으면 그날 도매 시세도 없다.
+ *
+ * 과일 이름부터 본문까지 전부 고칠 수 있으므로 저장 필드는 전부 본문 `var` + `protected set` 이고 [update] 로만 바꾼다.
  * 생성자 파라미터에 `val` 이 없는 이유다 — 파라미터는 본문 필드의 첫 값으로만 쓰인다.
  * 만든 뒤 안 바뀌는 건 [createdAt] 하나라 그것만 생성자 `val` 이다.
  *
@@ -29,7 +32,8 @@ import java.time.OffsetDateTime
 @Entity
 @Table(name = "review")
 class Review(
-    variety: VarietyMaster,
+    fruitName: String,
+    variety: VarietyMaster?,
     eatenDate: LocalDate,
     title: String,
     store: String,
@@ -47,9 +51,15 @@ class Review(
     var id: Long? = null
         protected set
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "variety_id", nullable = false)
-    var variety: VarietyMaster = variety
+    /** 포장에 적힌 그대로. 공개면 이름표와 검색에 쓴다 */
+    @Column(nullable = false, length = 100)
+    var fruitName: String = fruitName
+        protected set
+
+    /** 연결한 가락시장 품종. 연결 안 했으면 null */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variety_id")
+    var variety: VarietyMaster? = variety
         protected set
 
     /** 먹은 날. 상세에 붙는 도매 시세는 이날 또는 그 전 마지막 거래일 값이다. */
@@ -100,7 +110,8 @@ class Review(
         get() = weightGram?.let { BigDecimal(price).multiply(GRAMS_PER_KG).divide(BigDecimal(it), 0, RoundingMode.HALF_UP) }
 
     fun update(
-        variety: VarietyMaster,
+        fruitName: String,
+        variety: VarietyMaster?,
         eatenDate: LocalDate,
         title: String,
         store: String,
@@ -110,6 +121,7 @@ class Review(
         rating: Int,
         body: String,
     ) {
+        this.fruitName = fruitName
         this.variety = variety
         this.eatenDate = eatenDate
         this.title = title
@@ -122,7 +134,7 @@ class Review(
         this.updatedAt = OffsetDateTime.now()
     }
 
-    override fun toString(): String = "Review(id=$id, $eatenDate $title)"
+    override fun toString(): String = "Review(id=$id, $eatenDate $fruitName $title)"
 }
 
 private val GRAMS_PER_KG = BigDecimal(1000)

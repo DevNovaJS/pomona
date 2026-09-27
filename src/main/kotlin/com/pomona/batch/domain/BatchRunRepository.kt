@@ -10,8 +10,11 @@ import java.time.LocalDate
  */
 interface BatchRunRepository : JpaRepository<BatchRun, Long> {
 
-    /** 백오피스의 "최근 실행 이력". 최근에 시작한 순. */
-    fun findTop50ByOrderByIdDesc(): List<BatchRun>
+    /** 백오피스의 "최근 실행 이력" 첫 장. 최근에 시작한 순. */
+    fun findTop10ByOrderByIdDesc(): List<BatchRun>
+
+    /** 다음 장. [id] 보다 먼저 시작한 것 중 최근 순. id 가 시작 순으로 늘어나므로 커서로 쓴다. */
+    fun findTop10ByIdLessThanOrderByIdDesc(id: Long): List<BatchRun>
 
     fun findByJobNameAndTargetDateOrderByIdDesc(jobName: String, targetDate: LocalDate): List<BatchRun>
 

@@ -25,7 +25,8 @@ import java.time.LocalDate
 
 /**
  * 테스트 트랜잭션으로 감싸지 않는다. 감싸면 수정 내용이 테스트가 끝날 때까지 DB 에 안 나가서
- * "수정할 때 제약에 걸리면 400" 이 실제로 나는지 볼 수 없다. 대신 끝나면 시험 품종(대분류 ZZ)과 그 리뷰·도매 행을 지운다.
+ * "수정할 때 제약에 걸리면 400" 이 실제로 나는지 볼 수 없다. 대신 끝나면 시험 리뷰(과일명 '시험' 으로 시작)와
+ * 시험 품종(대분류 ZZ)과 그 도매 행을 지운다.
  *
  * 도매 행은 2099년에만 넣는다. 쓰기 레포가 날짜 단위로 지우고 넣으므로 실데이터 날짜를 쓰면 그날 실데이터가 지워진다.
  */
@@ -49,22 +50,25 @@ class ReviewControllerTest {
 
     @AfterEach
     fun cleanUp() {
-        jdbcTemplate.update("delete from review where variety_id in (select id from variety_master where lclsf_cd = 'ZZ')")
+        jdbcTemplate.update("delete from review where fruit_name like '시험%'")
         jdbcTemplate.update("delete from wholesale_daily where variety_id in (select id from variety_master where lclsf_cd = 'ZZ')")
         jdbcTemplate.update("delete from variety_master where lclsf_cd = 'ZZ'")
     }
 
-    /** 요청 본문. 바꾸고 싶은 값만 넘긴다. [weightGram] 가 null 이면 필드를 아예 빼고 보낸다. */
+    /** 요청 본문. 바꾸고 싶은 값만 넘긴다. [varietyId]·[weightGram] 가 null 이면 필드를 아예 빼고 보낸다. */
     private fun request(
         rating: Int = 4,
         price: Int = 25_000,
         weightGram: Int? = 2_000,
         title: String = "달았던 바나나",
-        varietyId: Long = this.varietyId,
+        varietyId: Long? = this.varietyId,
         eatenDate: String = "2099-01-10",
     ): String = jsonMapper.writeValueAsString(
         buildMap {
-            put("varietyId", varietyId)
+            put("fruitName", "시험바나나")
+            if (varietyId != null) {
+                put("varietyId", varietyId)
+            }
             put("eatenDate", eatenDate)
             put("title", title)
             put("store", "동네 마트")
@@ -100,14 +104,46 @@ class ReviewControllerTest {
     }
 
     @Test
-    fun `작성하면 201 과 품종 이름 kg당 가격을 준다`() {
+    fun `작성하면 201 과 과일명 품종 이름 kg당 가격을 준다`() {
         mockMvc.post("/api/admin/reviews") {
             contentType = MediaType.APPLICATION_JSON
             content = request()
         }.andExpect {
             status { isCreated() }
+            jsonPath("$.fruitName") { value("시험바나나") }
             jsonPath("$.itemName") { value("시험바나나") }
             jsonPath("$.pricePerKg") { value(12500) }
+        }
+    }
+
+    @Test
+    fun `품종을 연결하지 않고 작성하면 품종 정보와 도매 시세가 비어 있다`() {
+        plantWholesale()
+
+        mockMvc.post("/api/admin/reviews") {
+            contentType = MediaType.APPLICATION_JSON
+            content = request(varietyId = null)
+        }.andExpect {
+            status { isCreated() }
+            jsonPath("$.fruitName") { value("시험바나나") }
+            jsonPath("$.varietyId") { value(null) }
+            jsonPath("$.itemName") { value(null) }
+            jsonPath("$.marketPrice") { value(null) }
+        }
+    }
+
+    @Test
+    fun `수정에서 품종 연결을 빼면 도매 시세도 빠진다`() {
+        plantWholesale()
+        val id = create()
+
+        mockMvc.put("/api/admin/reviews/$id") {
+            contentType = MediaType.APPLICATION_JSON
+            content = request(varietyId = null)
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.varietyId") { value(null) }
+            jsonPath("$.marketPrice") { value(null) }
         }
     }
 
