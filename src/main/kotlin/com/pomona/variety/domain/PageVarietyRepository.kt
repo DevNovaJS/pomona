@@ -11,7 +11,7 @@ import java.time.LocalDate
  * 거래일 [MIN_TRADE_DAYS] 일 이상 · 물량 [MIN_QTY_KG] kg 이상.
  *
  * 거래가 적은 품종은 오늘 도매가가 몇 달 전 값이고 막대가 비어 빈약한 페이지가 된다.
- * 12개월로 잡는 건 감홍처럼 제철이 짧은 품종도 한 철은 들어오게 하려는 것이다.
+ * 12개월로 잡는 건 감홍처럼 한철만 짧게 나오는 품종도 그 한철이 들어오게 하려는 것이다.
  */
 @Repository
 class PageVarietyRepository(private val jdbcTemplate: JdbcTemplate) {

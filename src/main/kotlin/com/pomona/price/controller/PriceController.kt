@@ -1,6 +1,7 @@
 package com.pomona.price.controller
 
 import com.pomona.price.model.BuildPeriod
+import com.pomona.price.model.ItemDailyVolume
 import com.pomona.price.model.ItemMonthlyVolume
 import com.pomona.price.model.ItemTopOrigins
 import com.pomona.price.model.LatestPrice
@@ -39,12 +40,16 @@ class PriceController(private val publicPriceService: PublicPriceService) {
     @GetMapping("/volumes")
     fun volumes(): List<MonthlyVolume> = publicPriceService.volumes()
 
-    /** 제철 판단용. 품종별 최근 14일 물량과 평소 14일 물량, 그 배수. */
+    /** 메인의 "평소보다 많이 나오는 과일". 품종별 최근 14일 물량과 평소 14일 물량, 그 배수. */
     @GetMapping("/volumes/recent")
     fun recentVolumes(): List<RecentVolume> = publicPriceService.recentVolumes()
 
     @GetMapping("/volumes/items")
     fun itemVolumes(): List<ItemMonthlyVolume> = publicPriceService.itemVolumes()
+
+    /** 과일 캘린더. 품목별 하루 물량, 12개월 전부 */
+    @GetMapping("/volumes/items/daily")
+    fun itemDailyVolumes(): List<ItemDailyVolume> = publicPriceService.itemDailyVolumes()
 
     @GetMapping("/trading-days")
     fun tradingDays(): Map<YearMonth, Int> = publicPriceService.tradingDays()

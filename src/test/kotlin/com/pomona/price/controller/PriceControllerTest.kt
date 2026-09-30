@@ -150,7 +150,7 @@ class PriceControllerTest {
 
     @Test
     fun `나머지 공개 경로도 응답한다`() {
-        listOf("/api/public/prices/weekly", "/api/public/volumes/items", "/api/public/origins/items").forEach { path ->
+        listOf("/api/public/prices/weekly", "/api/public/volumes/items", "/api/public/volumes/items/daily", "/api/public/origins/items").forEach { path ->
             mockMvc.get(path).andExpect { status { isOk() } }
         }
     }

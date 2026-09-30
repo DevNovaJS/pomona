@@ -112,6 +112,13 @@ data class TradeItem(
 private const val UNMARKED_GRADE_CODE = "10"
 private const val UNMARKED_GRADE_NAME = "표기미상"
 
+/**
+ * 매매구분이 경매·정가수의·전자거래가 아니라 `-` 로 오는 거래. 한 건에 수백 톤을 kg당 200~300원대에 넘긴
+ * 영주 사과 무등급 같은 행이 들어 있어(실측 15개월 563행 · 3,805톤) 물량과 대표가를 흔든다.
+ * 아오리는 2026-09 물량 601톤 중 594톤이 이런 두 건이었다.
+ */
+private const val UNKNOWN_TRADE_TYPE = "-"
+
 /** 도매 집계의 자연키. 정산일자·시장·품종·매매구분·등급·산지·단위. */
 data class WholesaleKey(
     val trdClclnYmd: LocalDate,
@@ -137,7 +144,8 @@ fun List<TradeItem>.toVarieties(): List<VarietyUpsert> =
  */
 fun List<TradeItem>.toWholesaleRows(varietyIds: Map<Triple<String, String, String>, Long>): List<WholesaleDailyRow> =
     // 물량 0 인 행은 금액도 0 이라 대표가를 끌어내리기만 한다. 실측 12,175행 중 82행.
-    filter { it.totalQuantity().signum() > 0 }
+    // 매매구분이 `-` 인 행도 뺀다([UNKNOWN_TRADE_TYPE]).
+    filter { it.totalQuantity().signum() > 0 && it.trdSe != UNKNOWN_TRADE_TYPE }
         .groupBy { it.wholesaleKey() }
         .map { (key, items) ->
             WholesaleDailyRow(

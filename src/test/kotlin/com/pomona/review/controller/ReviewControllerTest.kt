@@ -104,7 +104,7 @@ class ReviewControllerTest {
     }
 
     @Test
-    fun `작성하면 201 과 과일명 품종 이름 kg당 가격을 준다`() {
+    fun `작성하면 201 과 과일명 품종 이름 품목 코드 kg당 가격을 준다`() {
         mockMvc.post("/api/admin/reviews") {
             contentType = MediaType.APPLICATION_JSON
             content = request()
@@ -112,6 +112,8 @@ class ReviewControllerTest {
             status { isCreated() }
             jsonPath("$.fruitName") { value("시험바나나") }
             jsonPath("$.itemName") { value("시험바나나") }
+            jsonPath("$.lclsfCd") { value("ZZ") }
+            jsonPath("$.mclsfCd") { value("01") }
             jsonPath("$.pricePerKg") { value(12500) }
         }
     }
@@ -128,6 +130,7 @@ class ReviewControllerTest {
             jsonPath("$.fruitName") { value("시험바나나") }
             jsonPath("$.varietyId") { value(null) }
             jsonPath("$.itemName") { value(null) }
+            jsonPath("$.mclsfCd") { value(null) }
             jsonPath("$.marketPrice") { value(null) }
         }
     }

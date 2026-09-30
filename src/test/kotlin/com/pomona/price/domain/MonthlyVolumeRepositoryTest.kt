@@ -1,5 +1,6 @@
 package com.pomona.price.domain
 
+import com.pomona.price.model.ItemDailyVolume
 import com.pomona.price.model.ItemMonthlyVolume
 import com.pomona.price.model.MonthlyVolume
 import com.pomona.price.model.Origin
@@ -120,6 +121,26 @@ class MonthlyVolumeRepositoryTest {
             itemVolume("01", jan, Origin.IMPORT, "30.000"),
             itemVolume("01", feb, Origin.DOMESTIC, "70.000"),
             itemVolume("02", jan, Origin.DOMESTIC, "40.000"),
+        )
+    }
+
+    @Test
+    fun `품목 일별 물량은 날마다 품목 안의 품종과 국산 수입을 합친다`() {
+        val fuji = plantVariety("01", "01")
+        val other = plantVariety("01", "99")
+        val otherItem = plantVariety("99", "98")
+        plant(
+            row(fuji, LocalDate.of(2099, 1, 5), domesticOrigin, "100.000"),
+            row(other, LocalDate.of(2099, 1, 5), domesticOrigin, "5.000"),
+            row(fuji, LocalDate.of(2099, 1, 5), importOrigin, "30.000"),
+            row(fuji, LocalDate.of(2099, 1, 6), domesticOrigin, "40.000"),
+            row(otherItem, LocalDate.of(2099, 1, 6), importOrigin, "9.000"),
+            row(fuji, LocalDate.of(2099, 2, 3), domesticOrigin, "70.000"),
+        )
+
+        assertThat(monthlyVolumeRepository.findItemDays(jan, jan)).containsExactly(
+            ItemDailyVolume("ZZ", "01", LocalDate.of(2099, 1, 5), BigDecimal("135.000")),
+            ItemDailyVolume("ZZ", "01", LocalDate.of(2099, 1, 6), BigDecimal("40.000")),
         )
     }
 

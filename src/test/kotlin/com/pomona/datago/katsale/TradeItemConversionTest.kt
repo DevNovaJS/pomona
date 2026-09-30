@@ -26,13 +26,14 @@ class TradeItemConversionTest {
         lwprc: String? = "20000.000",
         hgprc: String? = "40000.000",
         sclsfNm: String? = "홍로",
+        trdSe: String? = "경매",
     ) = TradeItem(
         trdClclnYmd = "2025-09-22", whslMrktCd = "110001", whslMrktNm = "서울가락",
         corpCd = "11000101", corpNm = "서울청과㈜",
         gdsLclsfCd = "06", gdsLclsfNm = "과실류",
         gdsMclsfCd = "01", gdsMclsfNm = "사과",
         gdsSclsfCd = "17", gdsSclsfNm = sclsfNm,
-        trdSe = "경매", unitCd = "12", unitNm = "kg",
+        trdSe = trdSe, unitCd = "12", unitNm = "kg",
         unitQty = unitQty, unitTotQty = unitTotQty,
         pkgCd = "101", pkgNm = null, szCd = "100", szNm = ".",
         grdCd = grdCd, grdNm = grdNm,
@@ -72,6 +73,15 @@ class TradeItemConversionTest {
             .toWholesaleRows(varietyIds)
 
         assertThat(rows.single().tradeCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `매매구분이 - 인 행은 집계에서 뺀다`() {
+        // 영주 사과 무등급 한 건 162톤 · kg당 188원 같은 행
+        val rows = listOf(trade(trdSe = "경매"), trade(trdSe = "-"), trade(trdSe = "정가수의"))
+            .toWholesaleRows(varietyIds)
+
+        assertThat(rows.map { it.trdSe }).containsExactlyInAnyOrder("경매", "정가수의")
     }
 
     @Test

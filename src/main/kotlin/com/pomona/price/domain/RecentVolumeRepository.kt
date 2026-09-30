@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository
 import java.time.LocalDate
 
 /**
- * 제철 판단용 물량. 품종별로 [end] 를 포함한 최근 14일 물량과, [end] 까지 12개월 물량을 14일치로 줄인 평소 물량을 낸다.
+ * 메인의 "평소보다 많이 나오는 과일"용 물량. 품종별로 [end] 를 포함한 최근 14일 물량과, [end] 까지 12개월 물량을 14일치로 줄인 평소 물량을 낸다.
  * 저장하지 않고 조회할 때마다 계산한다.
  */
 @Repository

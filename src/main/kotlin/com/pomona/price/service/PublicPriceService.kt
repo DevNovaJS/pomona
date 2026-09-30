@@ -7,6 +7,7 @@ import com.pomona.price.domain.RetailPriceRepository
 import com.pomona.price.domain.TopOriginRepository
 import com.pomona.price.domain.WeeklyPriceRepository
 import com.pomona.price.model.BuildPeriod
+import com.pomona.price.model.ItemDailyVolume
 import com.pomona.price.model.ItemMonthlyVolume
 import com.pomona.price.model.ItemTopOrigins
 import com.pomona.price.model.LatestPrice
@@ -38,10 +39,13 @@ class PublicPriceService(
 
     fun volumes(): List<MonthlyVolume> = buildPeriodService.current().let { monthlyVolumeRepository.findAll(it.from, it.to) }
 
-    /** 제철 판단용 최근 14일·평소 14일 물량. */
+    /** 메인의 "평소보다 많이 나오는 과일"용 최근 14일·평소 14일 물량. */
     fun recentVolumes(): List<RecentVolume> = recentVolumeRepository.findAll(buildPeriodService.current().baseDate)
 
     fun itemVolumes(): List<ItemMonthlyVolume> = buildPeriodService.current().let { monthlyVolumeRepository.findItems(it.from, it.to) }
+
+    /** 과일 캘린더용 품목 일별 물량. 12개월 전부 */
+    fun itemDailyVolumes(): List<ItemDailyVolume> = buildPeriodService.current().let { monthlyVolumeRepository.findItemDays(it.from, it.to) }
 
     fun tradingDays(): Map<YearMonth, Int> = buildPeriodService.current().let { monthlyVolumeRepository.countTradingDays(it.from, it.to) }
 

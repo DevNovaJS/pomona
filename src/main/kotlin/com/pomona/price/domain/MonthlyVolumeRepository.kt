@@ -1,6 +1,7 @@
 package com.pomona.price.domain
 
 import com.pomona.price.model.IMPORT_ORIGIN_PREFIX
+import com.pomona.price.model.ItemDailyVolume
 import com.pomona.price.model.ItemMonthlyVolume
 import com.pomona.price.model.MonthlyVolume
 import com.pomona.price.model.Origin
@@ -12,7 +13,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 
 /**
- * 도매 집계에서 월별 물량을 뽑는다. 저장하지 않고 조회할 때마다 계산한다.
+ * 도매 집계에서 월별 물량(과일 캘린더는 품목 일별 물량)을 뽑는다. 저장하지 않고 조회할 때마다 계산한다.
  *
  * 공개면 빌드가 하루 한 번 부르므로 품종·품목 하나씩이 아니라 **[from]~[to] 달 전부를 한 번에** 준다.
  * 하나씩 부르면 빌드 한 번에 품종 279번 · 품목 수십 번이 된다.
@@ -22,7 +23,7 @@ class MonthlyVolumeRepository(private val jdbcTemplate: JdbcTemplate) {
 
     /**
      * 품종 전부의 월별 물량을 달·원산지별로. 달 순, 달 안에서는 물량이 많은 순.
-     * 품종 페이지 막대는 품종으로 묶어 쓰고, 제철 캘린더는 이 순서 그대로 달로 묶어 쓴다.
+     * 품종 페이지 막대는 품종으로 묶어 쓰고, 과일 캘린더는 이 순서 그대로 달로 묶어 쓴다.
      */
     fun findAll(from: YearMonth, to: YearMonth): List<MonthlyVolume> =
         jdbcTemplate.query(BY_VARIETY, { rs, _ ->
@@ -42,6 +43,17 @@ class MonthlyVolumeRepository(private val jdbcTemplate: JdbcTemplate) {
                 mclsfCd = rs.getString("mclsf_cd"),
                 month = rs.getMonth(),
                 origin = rs.getOrigin(),
+                qty = rs.getBigDecimal("qty"),
+            )
+        }, from.firstDay(), to.nextFirstDay())
+
+    /** 품목 전부의 일별 물량. 품목 코드 순, 날짜 순. 거래가 없는 날은 들어가지 않는다. 기타 품목(중분류 `99`)은 뺀다. */
+    fun findItemDays(from: YearMonth, to: YearMonth): List<ItemDailyVolume> =
+        jdbcTemplate.query(BY_ITEM_DAY, { rs, _ ->
+            ItemDailyVolume(
+                lclsfCd = rs.getString("lclsf_cd"),
+                mclsfCd = rs.getString("mclsf_cd"),
+                date = rs.getObject("date", LocalDate::class.java),
                 qty = rs.getBigDecimal("qty"),
             )
         }, from.firstDay(), to.nextFirstDay())
@@ -82,6 +94,16 @@ private const val BY_ITEM = """
        and v.mclsf_cd <> '$OTHER_CODE'
      group by 1, 2, 3, 4
      order by 1, 2, 3, 4
+"""
+
+private const val BY_ITEM_DAY = """
+    select v.lclsf_cd, v.mclsf_cd, d.trd_clcln_ymd as date, sum(d.tot_qty) as qty
+      from wholesale_daily d
+      join variety_master v on v.id = d.variety_id
+     where d.trd_clcln_ymd >= ? and d.trd_clcln_ymd < ?
+       and v.mclsf_cd <> '$OTHER_CODE'
+     group by 1, 2, 3
+     order by 1, 2, 3
 """
 
 private const val TRADING_DAYS = """
