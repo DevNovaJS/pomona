@@ -1,5 +1,6 @@
 package com.pomona.price.service
 
+import com.pomona.price.domain.DailyPriceRepository
 import com.pomona.price.domain.LatestPriceRepository
 import com.pomona.price.domain.MonthlyVolumeRepository
 import com.pomona.price.domain.RecentVolumeRepository
@@ -7,6 +8,7 @@ import com.pomona.price.domain.RetailPriceRepository
 import com.pomona.price.domain.TopOriginRepository
 import com.pomona.price.domain.WeeklyPriceRepository
 import com.pomona.price.model.BuildPeriod
+import com.pomona.price.model.DailyPrice
 import com.pomona.price.model.ItemDailyVolume
 import com.pomona.price.model.ItemMonthlyVolume
 import com.pomona.price.model.ItemTopOrigins
@@ -25,6 +27,7 @@ class PublicPriceService(
     private val buildPeriodService: BuildPeriodService,
     private val latestPriceRepository: LatestPriceRepository,
     private val weeklyPriceRepository: WeeklyPriceRepository,
+    private val dailyPriceRepository: DailyPriceRepository,
     private val monthlyVolumeRepository: MonthlyVolumeRepository,
     private val recentVolumeRepository: RecentVolumeRepository,
     private val topOriginRepository: TopOriginRepository,
@@ -36,6 +39,9 @@ class PublicPriceService(
     fun latestPrices(): List<LatestPrice> = latestPriceRepository.findAll(buildPeriodService.current().baseDate)
 
     fun weeklyPrices(): List<WeeklyPrice> = weeklyPriceRepository.findAll(buildPeriodService.current().baseDate)
+
+    /** 품종 페이지의 최근 30일 추이. 거래일마다 등급 합산 kg당 가격 */
+    fun dailyPrices(): List<DailyPrice> = dailyPriceRepository.findAll(buildPeriodService.current().baseDate)
 
     fun volumes(): List<MonthlyVolume> = buildPeriodService.current().let { monthlyVolumeRepository.findAll(it.from, it.to) }
 

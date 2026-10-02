@@ -1,6 +1,7 @@
 package com.pomona.price.controller
 
 import com.pomona.price.model.BuildPeriod
+import com.pomona.price.model.DailyPrice
 import com.pomona.price.model.ItemDailyVolume
 import com.pomona.price.model.ItemMonthlyVolume
 import com.pomona.price.model.ItemTopOrigins
@@ -33,6 +34,10 @@ class PriceController(private val publicPriceService: PublicPriceService) {
 
     @GetMapping("/prices/weekly")
     fun weeklyPrices(): List<WeeklyPrice> = publicPriceService.weeklyPrices()
+
+    /** 품종 페이지의 최근 30일 추이. 품종별로 기준일 포함 30일 안의 거래일마다 한 행 */
+    @GetMapping("/prices/daily")
+    fun dailyPrices(): List<DailyPrice> = publicPriceService.dailyPrices()
 
     @GetMapping("/retail-prices")
     fun retailPrices(): List<RetailPrice> = publicPriceService.retailPrices()
