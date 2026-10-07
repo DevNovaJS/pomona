@@ -1,5 +1,6 @@
 package com.pomona.batch.controller
 
+import com.pomona.batch.model.BatchDayResponse
 import com.pomona.batch.model.BatchOverviewResponse
 import com.pomona.batch.model.BatchRunResponse
 import com.pomona.batch.service.BatchAdminService
@@ -22,9 +23,11 @@ class BatchController(private val batchAdminService: BatchAdminService) {
     @GetMapping("/status")
     fun status(): BatchOverviewResponse = batchAdminService.overview()
 
-    /** 10건씩. 다음 장은 받은 마지막 id 를 before 로 넘긴다. */
+    /** 수집 대상일 10일씩. 다음 장은 받은 마지막 날짜를 before 로 넘긴다. */
     @GetMapping("/runs")
-    fun recentRuns(@RequestParam before: Long?): List<BatchRunResponse> = batchAdminService.recentRuns(before)
+    fun recentDays(
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) before: LocalDate?,
+    ): List<BatchDayResponse> = batchAdminService.recentDays(before)
 
     @GetMapping("/failures")
     fun failures(): List<BatchRunResponse> = batchAdminService.failures()

@@ -40,6 +40,7 @@ out/
 .kotlin
 
 CLAUDE.md
+.claude/
 .env
 application-local.yml
 docker-compose.yml

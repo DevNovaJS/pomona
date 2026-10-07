@@ -28,3 +28,15 @@ fun BatchRun.toResponse() = BatchRunResponse(
     id = id!!, jobName = jobName, targetDate = targetDate, status = status, params = params,
     rowCount = rowCount, message = message, startedAt = startedAt, finishedAt = finishedAt,
 )
+
+/** 최근 실행 이력의 하루. 작업·품목마다 마지막 실행만 담는다(도매 한 건, 소매는 품목 수만큼). */
+data class BatchDayResponse(
+    val targetDate: LocalDate,
+    val runs: List<LatestRunResponse>,
+)
+
+data class LatestRunResponse(
+    val run: BatchRunResponse,
+    /** 그날 같은 작업·품목을 돈 횟수. 매일 D-1~D-5 재수집과 재실행이 다 들어간다 */
+    val attempts: Int,
+)

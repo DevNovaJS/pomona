@@ -57,24 +57,25 @@ class BatchControllerTest {
     }
 
     @Test
-    fun `최근 이력에 방금 실행이 맨 앞에 온다`() {
+    fun `최근 이력은 수집 대상일로 묶고 실행마다 params 를 JSON 그대로 준다`() {
         val run = failedRun()
 
         mockMvc.get("/api/admin/batch/runs").andExpect {
             status { isOk() }
-            jsonPath("$[0].id") { value(run.id!!) }
-            jsonPath("$[0].status") { value("FAILED") }
+            jsonPath("$[0].targetDate") { value("2099-01-05") }
+            jsonPath("$[0].runs[0].run.id") { value(run.id!!) }
+            jsonPath("$[0].runs[0].run.params.date") { value("2099-01-05") }
+            jsonPath("$[0].runs[0].attempts") { value(1) }
         }
     }
 
     @Test
-    fun `before 를 주면 그보다 먼저 시작한 것만 준다`() {
-        val older = failedRun()
-        val newer = failedRun()
+    fun `before 날짜를 주면 그보다 앞선 날짜만 준다`() {
+        failedRun()
 
-        mockMvc.get("/api/admin/batch/runs?before=${newer.id}").andExpect {
+        mockMvc.get("/api/admin/batch/runs?before=2099-01-05").andExpect {
             status { isOk() }
-            jsonPath("$[0].id") { value(older.id!!) }
+            jsonPath("$[?(@.targetDate == '2099-01-05')]") { isEmpty() }
         }
     }
 

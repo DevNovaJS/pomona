@@ -1,0 +1,40 @@
+{
+  "response": {
+    "body": {
+      "dataType": "JSON",
+      "items": {
+        "item": [
+          {
+            "ctgry_cd": "400",
+            "ctgry_nm": "과일류",
+            "exmn_dd_cnvs_prc": "19900",
+            "exmn_dd_prc": "19900",
+            "exmn_ymd": "20260907",
+            "grd_cd": "04",
+            "grd_nm": "상품",
+            "item_cd": "411",
+            "item_nm": "사과",
+            "mrkt_cd": "0250401",
+            "mrkt_nm": "C-유통",
+            "orgnl_reg_dt": "2026-09-07T15:03:15Z",
+            "se_cd": "01",
+            "se_nm": "소매",
+            "sgg_cd": "2501",
+            "sgg_nm": "대전",
+            "unit": "개",
+            "unit_sz": "10",
+            "vrty_cd": "ZZ",
+            "vrty_nm": "시험품종"
+          }
+        ]
+      },
+      "numOfRows": 1,
+      "pageNo": 1,
+      "totalCount": 1
+    },
+    "header": {
+      "resultCode": "0",
+      "resultMsg": "정상"
+    }
+  }
+}

@@ -75,18 +75,4 @@ class BatchRunQueryTest {
 
         assertThat(last.targetDate).isEqualTo(LocalDate.of(2099, 1, 5))
     }
-
-    @Test
-    fun `최근 이력은 나중에 시작한 것부터 10건씩 준다`() {
-        val first = finished(2, BatchStatus.SUCCESS)
-        val second = finished(1, BatchStatus.SUCCESS)
-        repeat(10) { finished(3, BatchStatus.SUCCESS) }
-
-        val page = batchRunRepository.findTop10ByOrderByIdDesc()
-
-        assertThat(page).hasSize(10)
-        assertThat(page.map { it.id }).doesNotContain(second.id, first.id)
-        assertThat(batchRunRepository.findTop10ByIdLessThanOrderByIdDesc(page.last().id!!).take(2).map { it.id })
-            .containsExactly(second.id, first.id)
-    }
 }

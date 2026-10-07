@@ -138,14 +138,15 @@ class RetailCollectorTest {
 
     @Test
     fun `응답에 나온 소매 품종을 소매 품종 마스터에 올린다`() {
-        // 로컬 DB 에 실데이터로 채운 사과 품종이 있으므로 지우고 시작한다. 테스트가 끝나면 롤백된다.
-        jdbcTemplate.update("delete from retail_variety where item_cd = '411'")
-        respondWith("perday-price-2rows.json")
+        // 로컬 DB 에 실데이터 품종이 있어서 실제 품종(쓰가루)으로는 수집 전부터 있던 것과 구별이 안 된다.
+        // 실데이터에 없는 품종 코드(ZZ)가 담긴 응답으로 수집해 새로 생기는지 본다
+        val testVariety = "select vrty_nm from retail_variety where item_cd = '411' and vrty_cd = 'ZZ'"
+        assertThat(jdbcTemplate.queryForList(testVariety, String::class.java)).isEmpty()
+        respondWith("perday-price-test-variety.json")
 
         retailCollector.collect(apple, from, day)
 
-        val names = jdbcTemplate.queryForList("select vrty_nm from retail_variety where item_cd = '411'", String::class.java)
-        assertThat(names).contains("쓰가루(아오리)")
+        assertThat(jdbcTemplate.queryForList(testVariety, String::class.java)).containsExactly("시험품종")
     }
 
     @Test

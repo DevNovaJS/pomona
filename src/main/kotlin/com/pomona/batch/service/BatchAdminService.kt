@@ -1,7 +1,9 @@
 package com.pomona.batch.service
 
 import com.pomona.batch.BatchRunNotFoundException
+import com.pomona.batch.domain.BatchDayRepository
 import com.pomona.batch.domain.BatchRunRepository
+import com.pomona.batch.model.BatchDayResponse
 import com.pomona.batch.model.BatchOverviewResponse
 import com.pomona.batch.model.BatchRunResponse
 import com.pomona.batch.model.JobStatusResponse
@@ -14,6 +16,7 @@ import java.time.LocalDate
 @Service
 class BatchAdminService(
     private val batchRunRepository: BatchRunRepository,
+    private val batchDayRepository: BatchDayRepository,
     private val rangeCollector: RangeCollector,
 ) {
 
@@ -28,17 +31,10 @@ class BatchAdminService(
     }
 
     /**
-     * 최근 실행 이력을 10건씩. [before] 가 없으면 가장 최근 10건, 있으면 그 id 보다 먼저 시작한 10건.
-     * 화면은 받은 마지막 id 를 다음 [before] 로 넘기고, 10건보다 적게 오면 끝이다.
+     * 최근 실행 이력을 수집 대상일 10일씩. [before] 가 없으면 가장 최근 날짜부터, 있으면 그 날짜보다 앞선 10일.
+     * 화면은 받은 마지막 날짜를 다음 [before] 로 넘기고, 10일보다 적게 오면 끝이다.
      */
-    fun recentRuns(before: Long?): List<BatchRunResponse> {
-        val runs = if (before == null) {
-            batchRunRepository.findTop10ByOrderByIdDesc()
-        } else {
-            batchRunRepository.findTop10ByIdLessThanOrderByIdDesc(before)
-        }
-        return runs.map { it.toResponse() }
-    }
+    fun recentDays(before: LocalDate?): List<BatchDayResponse> = batchDayRepository.findDays(before)
 
     fun failures(): List<BatchRunResponse> = batchRunRepository.findUnresolvedFailures().map { it.toResponse() }
 
@@ -48,6 +44,6 @@ class BatchAdminService(
         return rangeCollector.retry(run).toResponse()
     }
 
-    /** 기간 재수집. 뒤에서 돌리고 바로 돌아온다. 진행은 [overview] 의 running 과 [recentRuns] 로 본다. */
+    /** 기간 재수집. 뒤에서 돌리고 바로 돌아온다. 진행은 [overview] 의 running 과 [recentDays] 로 본다. */
     fun collect(from: LocalDate, to: LocalDate) = rangeCollector.startAll(from, to)
 }
