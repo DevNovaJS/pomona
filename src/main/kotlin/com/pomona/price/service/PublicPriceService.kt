@@ -43,12 +43,17 @@ class PublicPriceService(
     /** 품종 페이지의 최근 30일 추이. 거래일마다 등급 합산 kg당 가격 */
     fun dailyPrices(): List<DailyPrice> = dailyPriceRepository.findAll(buildPeriodService.current().baseDate)
 
-    fun volumes(): List<MonthlyVolume> = buildPeriodService.current().let { monthlyVolumeRepository.findAll(it.from, it.to) }
+    /**
+     * 품종별 월별 물량. 12개월에 작년 같은 달을 하나 더 붙인 13개월을 준다 — 막대는 12칸만 그리고,
+     * 진행 중인 이번 달 칸에 작년 같은 달을 겹쳐 그린다.
+     */
+    fun volumes(): List<MonthlyVolume> = buildPeriodService.current().let { monthlyVolumeRepository.findAll(it.to.minusYears(1), it.to) }
 
     /** 메인의 "평소보다 많이 나오는 과일"용 최근 14일·평소 14일 물량. */
     fun recentVolumes(): List<RecentVolume> = recentVolumeRepository.findAll(buildPeriodService.current().baseDate)
 
-    fun itemVolumes(): List<ItemMonthlyVolume> = buildPeriodService.current().let { monthlyVolumeRepository.findItems(it.from, it.to) }
+    /** 품목별 월별 물량. [volumes] 와 같이 작년 같은 달까지 13개월 */
+    fun itemVolumes(): List<ItemMonthlyVolume> = buildPeriodService.current().let { monthlyVolumeRepository.findItems(it.to.minusYears(1), it.to) }
 
     /** 과일 캘린더용 품목 일별 물량. 12개월 전부 */
     fun itemDailyVolumes(): List<ItemDailyVolume> = buildPeriodService.current().let { monthlyVolumeRepository.findItemDays(it.from, it.to) }

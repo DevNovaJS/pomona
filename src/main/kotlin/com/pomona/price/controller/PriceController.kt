@@ -42,6 +42,7 @@ class PriceController(private val publicPriceService: PublicPriceService) {
     @GetMapping("/retail-prices")
     fun retailPrices(): List<RetailPrice> = publicPriceService.retailPrices()
 
+    /** 12개월에 작년 같은 달을 더한 13개월. 막대는 12칸, 13번째 달은 이번 달과 나란히 본다 */
     @GetMapping("/volumes")
     fun volumes(): List<MonthlyVolume> = publicPriceService.volumes()
 

@@ -95,6 +95,28 @@ class PriceControllerTest {
     }
 
     @Test
+    fun `월별 물량은 12개월에 작년 같은 달을 더한 13개월을 준다`() {
+        // 기준일 2099-12-20 → 12개월 2099-01~12 에 작년 같은 달 2098-12 를 더한다. 그 앞 달(2098-11)은 빠진다
+        listOf(LocalDate.of(2098, 12, 5), LocalDate.of(2098, 11, 30)).forEach { date ->
+            wholesaleDailyWriteRepository.replaceDay(date, garak, listOf(
+                WholesaleDailyRow(
+                    trdClclnYmd = date, whslMrktCd = garak, varietyId = varietyId,
+                    trdSe = "경매", grdCd = "11", grdNm = "특", plorCd = "367000", plorNm = "충청북도 괴산군", unitNm = "kg",
+                    totPrc = 50_000, totQty = BigDecimal("50"),
+                    lowPrcPerKg = BigDecimal.ONE, highPrcPerKg = BigDecimal.ONE, tradeCount = 1,
+                ),
+            ))
+        }
+
+        mockMvc.get("/api/public/volumes").andExpect {
+            status { isOk() }
+            jsonPath("$[?(@.varietyId == $varietyId && @.month == '2098-12')].qty") { value(50.000) }
+            jsonPath("$[?(@.varietyId == $varietyId && @.month == '2099-12')].qty") { value(1000.000) }
+            jsonPath("$[?(@.month == '2098-11')]") { isEmpty() }
+        }
+    }
+
+    @Test
     fun `최근 14일 물량은 평소 물량과 배수를 같이 준다`() {
         mockMvc.get("/api/public/volumes/recent").andExpect {
             status { isOk() }
